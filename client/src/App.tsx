@@ -12,6 +12,7 @@ import RobloxProcesses from "@/pages/roblox-processes";
 import SyncManager from "@/pages/sync-manager";
 import EnhancedSystem from "@/pages/enhanced-system";
 import ProvenMultiInstance from "@/pages/proven-multi-instance";
+import RealLauncher from "@/pages/real-launcher";
 import Settings from "@/pages/settings";
 import NotFound from "@/pages/not-found";
 
@@ -29,6 +30,7 @@ function Router() {
           <Route path="/sync-manager" component={SyncManager} />
           <Route path="/enhanced-system" component={EnhancedSystem} />
           <Route path="/proven-multi-instance" component={ProvenMultiInstance} />
+          <Route path="/real-launcher" component={RealLauncher} />
           <Route path="/settings" component={Settings} />
           <Route component={NotFound} />
         </Switch>

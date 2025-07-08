@@ -6,10 +6,12 @@ import { z } from "zod";
 import { UWPInstanceManager } from "./uwp-instance-manager";
 import { AccountSyncManager } from "./account-sync-manager";
 import { robloxProcessDetector } from "./roblox-process-detector";
+import { RealProcessLauncher } from "./real-process-launcher";
 
 // Initialize managers
 const uwpManager = new UWPInstanceManager();
 const syncManager = new AccountSyncManager();
+const realLauncher = new RealProcessLauncher();
 
 // Initialize UWP manager on startup
 uwpManager.initialize().catch(console.error);
@@ -495,6 +497,56 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
     } catch (error: any) {
       res.status(500).json({ error: error.message || "Failed to terminate process" });
+    }
+  });
+
+  // Real Process Launcher Routes
+  app.get("/api/roblox/real-processes", async (req, res) => {
+    try {
+      const processes = realLauncher.getRunningProcesses();
+      res.json(processes);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message || "Failed to get real processes" });
+    }
+  });
+
+  app.post("/api/roblox/launch-real-instance", async (req, res) => {
+    try {
+      const { instanceId, accountId, gameUrl, authCookie, windowPosition, resourceLimits, launchMethod } = req.body;
+      
+      if (!instanceId || !accountId) {
+        return res.status(400).json({ error: "Instance ID and Account ID are required" });
+      }
+
+      const options = {
+        instanceId,
+        accountId,
+        gameUrl,
+        authCookie,
+        windowPosition,
+        resourceLimits,
+        launchMethod
+      };
+
+      const process = await realLauncher.launchInstance(options);
+      res.json(process);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message || "Failed to launch real instance" });
+    }
+  });
+
+  app.post("/api/roblox/real-instances/:instanceId/stop", async (req, res) => {
+    try {
+      const { instanceId } = req.params;
+      const success = await realLauncher.stopInstance(instanceId);
+      
+      if (success) {
+        res.json({ message: "Real instance stopped successfully" });
+      } else {
+        res.status(404).json({ error: "Real instance not found" });
+      }
+    } catch (error: any) {
+      res.status(500).json({ error: error.message || "Failed to stop real instance" });
     }
   });
 

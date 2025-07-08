@@ -9,7 +9,8 @@ import {
   Shield,
   Link2,
   Zap,
-  Search
+  Search,
+  Rocket
 } from "lucide-react";
 
 const navigation = [
@@ -19,6 +20,7 @@ const navigation = [
   { name: "Process Detection", href: "/roblox-processes", icon: Search },
   { name: "Enhanced System", href: "/enhanced-system", icon: Zap },
   { name: "Proven Multi-Instance", href: "/proven-multi-instance", icon: Shield },
+  { name: "Real Launcher", href: "/real-launcher", icon: Rocket },
   { name: "Sync Manager", href: "/sync-manager", icon: Link2 },
   { name: "Accounts", href: "/accounts", icon: Users },
   { name: "Settings", href: "/settings", icon: Settings },
