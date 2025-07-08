@@ -1,0 +1,15 @@
+{
+  "name": "roblox-multi-instance-portable",
+  "version": "1.0.0",
+  "description": "Portable Roblox Multi-Instance Manager",
+  "main": "portable-launcher.js",
+  "scripts": {
+    "start": "node portable-launcher.js"
+  },
+  "dependencies": {
+    "express": "^4.18.2"
+  },
+  "bin": {
+    "roblox-manager": "./portable-launcher.js"
+  }
+}

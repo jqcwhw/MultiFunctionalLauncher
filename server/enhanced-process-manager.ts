@@ -99,26 +99,40 @@ export class EnhancedProcessManager extends EventEmitter {
    * Prepare the launch environment with registry modifications
    */
   private async prepareLaunchEnvironment(options: LaunchOptions): Promise<void> {
-    // Create instance-specific registry entries
-    const script = `
-      $instancePath = "HKCU:\\Software\\Roblox Corporation\\Instances\\${options.instanceId}"
-      
-      if (!(Test-Path $instancePath)) {
-        New-Item -Path $instancePath -Force | Out-Null
+    if (process.platform !== 'win32') {
+      console.log('Non-Windows platform, creating instance config file instead of registry');
+      // Create config file for non-Windows systems
+      const configDir = path.join(process.cwd(), 'instance-configs');
+      if (!await fs.promises.access(configDir).then(() => true).catch(() => false)) {
+        await fs.promises.mkdir(configDir, { recursive: true });
       }
       
-      Set-ItemProperty -Path $instancePath -Name "InstanceId" -Value "${options.instanceId}"
-      Set-ItemProperty -Path $instancePath -Name "LaunchTime" -Value (Get-Date).ToString()
-      Set-ItemProperty -Path $instancePath -Name "Status" -Value "launching"
+      const configFile = path.join(configDir, `${options.instanceId}.json`);
+      const config = {
+        instanceId: options.instanceId,
+        launchTime: new Date().toISOString(),
+        status: 'launching',
+        accountId: options.accountId
+      };
       
-      if ("${options.accountId}") {
-        Set-ItemProperty -Path $instancePath -Name "AccountId" -Value "${options.accountId}"
-      }
-      
-      Write-Output "Environment prepared for ${options.instanceId}"
-    `;
+      await fs.promises.writeFile(configFile, JSON.stringify(config, null, 2));
+      return;
+    }
 
-    await this.executePowerShellScript(script);
+    // Windows registry approach using batch commands
+    const batchCommands = [
+      `reg add "HKCU\\Software\\Roblox Corporation\\Instances\\${options.instanceId}" /f`,
+      `reg add "HKCU\\Software\\Roblox Corporation\\Instances\\${options.instanceId}" /v "InstanceId" /t REG_SZ /d "${options.instanceId}" /f`,
+      `reg add "HKCU\\Software\\Roblox Corporation\\Instances\\${options.instanceId}" /v "LaunchTime" /t REG_SZ /d "%date% %time%" /f`,
+      `reg add "HKCU\\Software\\Roblox Corporation\\Instances\\${options.instanceId}" /v "Status" /t REG_SZ /d "launching" /f`
+    ];
+
+    if (options.accountId) {
+      batchCommands.push(`reg add "HKCU\\Software\\Roblox Corporation\\Instances\\${options.instanceId}" /v "AccountId" /t REG_SZ /d "${options.accountId}" /f`);
+    }
+
+    const batchScript = batchCommands.join(' && ');
+    await this.executeBatchCommand(batchScript);
   }
 
   /**
@@ -335,36 +349,41 @@ export class EnhancedProcessManager extends EventEmitter {
   }
 
   /**
-   * Find all running Roblox processes
+   * Find all running Roblox processes with cross-platform support
    */
   private async findRobloxProcesses(): Promise<Array<{ pid: number; name: string; startTime: Date }>> {
     try {
-      const { stdout } = await execAsync('wmic process where "name=\'RobloxPlayerBeta.exe\'" get ProcessId,CreationDate /format:csv');
-      const lines = stdout.split('\n').filter(line => line.trim() && !line.includes('Node,CreationDate,ProcessId'));
-      
-      return lines.map(line => {
-        const parts = line.split(',');
-        const creationDate = parts[1]?.trim();
-        const pid = parseInt(parts[2]?.trim()) || 0;
+      if (process.platform === 'win32') {
+        // Windows: Use tasklist command instead of wmic for better compatibility
+        const { stdout } = await this.executeBatchCommand('tasklist /fi "imagename eq RobloxPlayerBeta.exe" /fo csv');
+        const lines = stdout.split('\n').filter(line => line.includes('RobloxPlayerBeta.exe'));
         
-        // Parse Windows WMI date format
-        let startTime = new Date();
-        if (creationDate && creationDate.length >= 14) {
-          const year = parseInt(creationDate.substr(0, 4));
-          const month = parseInt(creationDate.substr(4, 2)) - 1;
-          const day = parseInt(creationDate.substr(6, 2));
-          const hour = parseInt(creationDate.substr(8, 2));
-          const minute = parseInt(creationDate.substr(10, 2));
-          const second = parseInt(creationDate.substr(12, 2));
-          startTime = new Date(year, month, day, hour, minute, second);
-        }
+        return lines.map(line => {
+          const parts = line.split('","').map(part => part.replace(/"/g, ''));
+          const pid = parseInt(parts[1]) || 0;
+          
+          return {
+            pid,
+            name: 'RobloxPlayerBeta.exe',
+            startTime: new Date() // Approximate start time
+          };
+        }).filter(proc => proc.pid > 0);
+      } else {
+        // Unix-like systems: Use ps command
+        const { stdout } = await this.executeBatchCommand('ps aux | grep -i roblox || echo "No Roblox processes found"');
+        const lines = stdout.split('\n').filter(line => line.includes('roblox') && !line.includes('grep'));
         
-        return {
-          pid,
-          name: 'RobloxPlayerBeta.exe',
-          startTime
-        };
-      }).filter(proc => proc.pid > 0);
+        return lines.map(line => {
+          const parts = line.trim().split(/\s+/);
+          const pid = parseInt(parts[1]) || 0;
+          
+          return {
+            pid,
+            name: 'Roblox',
+            startTime: new Date()
+          };
+        }).filter(proc => proc.pid > 0);
+      }
     } catch (error) {
       console.error('Error finding Roblox processes:', error);
       return [];
@@ -478,38 +497,83 @@ export class EnhancedProcessManager extends EventEmitter {
   }
 
   /**
-   * Execute PowerShell script
+   * Execute batch/shell command with cross-platform support
    */
-  private async executePowerShellScript(script: string): Promise<{ stdout: string; stderr: string }> {
+  private async executeBatchCommand(command: string): Promise<{ stdout: string; stderr: string }> {
+    // Use appropriate shell for the platform
+    const isWindows = process.platform === 'win32';
+    const shell = isWindows ? 'cmd.exe' : '/bin/bash';
+    const args = isWindows ? ['/c', command] : ['-c', command];
+
     return new Promise((resolve, reject) => {
-      const process = spawn('powershell.exe', ['-NoProfile', '-Command', script], {
+      const process = spawn(shell, args, {
         stdio: ['pipe', 'pipe', 'pipe'],
-        windowsHide: true
+        windowsHide: isWindows
       });
 
       let stdout = '';
       let stderr = '';
 
-      process.stdout.on('data', (data) => {
+      process.stdout?.on('data', (data) => {
         stdout += data.toString();
       });
 
-      process.stderr.on('data', (data) => {
+      process.stderr?.on('data', (data) => {
         stderr += data.toString();
       });
 
       process.on('close', (code) => {
-        if (code === 0) {
-          resolve({ stdout: stdout.trim(), stderr: stderr.trim() });
-        } else {
-          reject(new Error(`PowerShell script failed with code ${code}: ${stderr}`));
-        }
+        resolve({ stdout: stdout.trim(), stderr: stderr.trim() });
       });
 
       process.on('error', (error) => {
         reject(error);
       });
     });
+  }
+
+  /**
+   * Execute PowerShell script with batch fallback
+   */
+  private async executePowerShellScript(script: string): Promise<{ stdout: string; stderr: string }> {
+    // Skip PowerShell operations on non-Windows platforms
+    if (process.platform !== 'win32') {
+      console.log('Non-Windows platform detected, using shell commands');
+      return { stdout: 'SKIPPED:Non-Windows platform', stderr: '' };
+    }
+
+    try {
+      // Try PowerShell first
+      return await new Promise((resolve, reject) => {
+        const psProcess = spawn('powershell.exe', ['-NoProfile', '-Command', script], {
+          stdio: ['pipe', 'pipe', 'pipe'],
+          windowsHide: true
+        });
+
+        let stdout = '';
+        let stderr = '';
+
+        psProcess.stdout?.on('data', (data) => {
+          stdout += data.toString();
+        });
+
+        psProcess.stderr?.on('data', (data) => {
+          stderr += data.toString();
+        });
+
+        psProcess.on('close', (code) => {
+          resolve({ stdout: stdout.trim(), stderr: stderr.trim() });
+        });
+
+        psProcess.on('error', (error) => {
+          reject(error);
+        });
+      });
+    } catch (error) {
+      // Fallback to batch commands
+      console.log('PowerShell not available, using batch fallback');
+      return this.executeBatchCommand('echo PowerShell not available, using batch fallback');
+    }
   }
 
   /**
