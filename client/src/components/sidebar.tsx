@@ -5,12 +5,16 @@ import {
   Users, 
   Settings, 
   Activity,
-  GamepadIcon
+  GamepadIcon,
+  Shield,
+  Link2
 } from "lucide-react";
 
 const navigation = [
   { name: "Dashboard", href: "/", icon: Monitor },
-  { name: "Instances", href: "/instances", icon: GamepadIcon },
+  { name: "Legacy Instances", href: "/instances", icon: GamepadIcon },
+  { name: "UWP Instances", href: "/uwp-instances", icon: Shield },
+  { name: "Sync Manager", href: "/sync-manager", icon: Link2 },
   { name: "Accounts", href: "/accounts", icon: Users },
   { name: "Settings", href: "/settings", icon: Settings },
 ];

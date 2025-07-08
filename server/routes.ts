@@ -3,6 +3,15 @@ import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { insertAccountSchema, insertInstanceSchema, insertActivityLogSchema, insertSettingsSchema } from "@shared/schema";
 import { z } from "zod";
+import { UWPInstanceManager } from "./uwp-instance-manager";
+import { AccountSyncManager } from "./account-sync-manager";
+
+// Initialize managers
+const uwpManager = new UWPInstanceManager();
+const syncManager = new AccountSyncManager();
+
+// Initialize UWP manager on startup
+uwpManager.initialize().catch(console.error);
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Account routes
@@ -311,6 +320,179 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json(setting);
     } catch (error) {
       res.status(500).json({ error: "Failed to update setting" });
+    }
+  });
+
+  // UWP Instance Management Routes
+  app.get("/api/uwp-instances", async (req, res) => {
+    try {
+      const instances = uwpManager.getInstances();
+      res.json(instances);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch UWP instances" });
+    }
+  });
+
+  app.post("/api/uwp-instances", async (req, res) => {
+    try {
+      const { name, accountId } = req.body;
+      if (!name) {
+        return res.status(400).json({ error: "Instance name is required" });
+      }
+      
+      const instance = await uwpManager.createInstance(name, accountId);
+      res.status(201).json(instance);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message || "Failed to create UWP instance" });
+    }
+  });
+
+  app.post("/api/uwp-instances/:id/launch", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { gameId } = req.body;
+      
+      await uwpManager.launchInstance(id, gameId);
+      res.json({ message: "Instance launched successfully" });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message || "Failed to launch instance" });
+    }
+  });
+
+  app.post("/api/uwp-instances/:id/close", async (req, res) => {
+    try {
+      const { id } = req.params;
+      await uwpManager.closeInstance(id);
+      res.json({ message: "Instance closed successfully" });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message || "Failed to close instance" });
+    }
+  });
+
+  app.delete("/api/uwp-instances/:id", async (req, res) => {
+    try {
+      const { id } = req.params;
+      await uwpManager.removeInstance(id);
+      res.json({ message: "Instance removed successfully" });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message || "Failed to remove instance" });
+    }
+  });
+
+  app.post("/api/uwp-instances/organize", async (req, res) => {
+    try {
+      await uwpManager.organizeWindows();
+      res.json({ message: "Windows organized successfully" });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message || "Failed to organize windows" });
+    }
+  });
+
+  // Account Sync Management Routes
+  app.get("/api/sync-sessions", async (req, res) => {
+    try {
+      const sessions = syncManager.getActiveSyncSessions();
+      res.json(sessions);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch sync sessions" });
+    }
+  });
+
+  app.post("/api/sync-sessions", async (req, res) => {
+    try {
+      const { masterInstanceId, slaveInstanceIds, mode = 'mirror', delay = 100 } = req.body;
+      
+      if (!masterInstanceId || !slaveInstanceIds || !Array.isArray(slaveInstanceIds)) {
+        return res.status(400).json({ error: "Master instance ID and slave instance IDs are required" });
+      }
+      
+      const syncId = await syncManager.startSync(masterInstanceId, slaveInstanceIds, mode, delay);
+      res.status(201).json({ syncId, message: "Sync session started" });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message || "Failed to start sync session" });
+    }
+  });
+
+  app.delete("/api/sync-sessions/:id", async (req, res) => {
+    try {
+      const { id } = req.params;
+      await syncManager.stopSync(id);
+      res.json({ message: "Sync session stopped" });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message || "Failed to stop sync session" });
+    }
+  });
+
+  app.post("/api/recording/start", async (req, res) => {
+    try {
+      const { instanceId } = req.body;
+      if (!instanceId) {
+        return res.status(400).json({ error: "Instance ID is required" });
+      }
+      
+      await syncManager.startRecording(instanceId);
+      res.json({ message: "Recording started" });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message || "Failed to start recording" });
+    }
+  });
+
+  app.post("/api/recording/stop", async (req, res) => {
+    try {
+      const actions = await syncManager.stopRecording();
+      res.json({ actions, message: "Recording stopped" });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message || "Failed to stop recording" });
+    }
+  });
+
+  app.post("/api/recording/playback", async (req, res) => {
+    try {
+      const { actions, targetInstanceIds } = req.body;
+      
+      if (!actions || !targetInstanceIds || !Array.isArray(targetInstanceIds)) {
+        return res.status(400).json({ error: "Actions and target instance IDs are required" });
+      }
+      
+      await syncManager.playbackActions(actions, targetInstanceIds);
+      res.json({ message: "Playback completed" });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message || "Failed to playback actions" });
+    }
+  });
+
+  app.get("/api/recordings", async (req, res) => {
+    try {
+      const recordings = syncManager.getAvailableRecordings();
+      res.json(recordings);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch recordings" });
+    }
+  });
+
+  app.post("/api/recordings/:name/save", async (req, res) => {
+    try {
+      const { name } = req.params;
+      const { actions } = req.body;
+      
+      if (!actions || !Array.isArray(actions)) {
+        return res.status(400).json({ error: "Actions are required" });
+      }
+      
+      await syncManager.saveRecording(actions, name);
+      res.json({ message: "Recording saved" });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message || "Failed to save recording" });
+    }
+  });
+
+  app.get("/api/recordings/:name", async (req, res) => {
+    try {
+      const { name } = req.params;
+      const actions = await syncManager.loadRecording(name);
+      res.json(actions);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message || "Failed to load recording" });
     }
   });
 

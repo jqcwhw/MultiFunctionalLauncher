@@ -7,6 +7,8 @@ import { Sidebar } from "@/components/sidebar";
 import Dashboard from "@/pages/dashboard";
 import Accounts from "@/pages/accounts";
 import Instances from "@/pages/instances";
+import UWPInstances from "@/pages/uwp-instances";
+import SyncManager from "@/pages/sync-manager";
 import Settings from "@/pages/settings";
 import NotFound from "@/pages/not-found";
 
@@ -19,6 +21,8 @@ function Router() {
           <Route path="/" component={Dashboard} />
           <Route path="/accounts" component={Accounts} />
           <Route path="/instances" component={Instances} />
+          <Route path="/uwp-instances" component={UWPInstances} />
+          <Route path="/sync-manager" component={SyncManager} />
           <Route path="/settings" component={Settings} />
           <Route component={NotFound} />
         </Switch>
