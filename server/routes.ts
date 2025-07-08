@@ -5,6 +5,7 @@ import { insertAccountSchema, insertInstanceSchema, insertActivityLogSchema, ins
 import { z } from "zod";
 import { UWPInstanceManager } from "./uwp-instance-manager";
 import { AccountSyncManager } from "./account-sync-manager";
+import { robloxProcessDetector } from "./roblox-process-detector";
 
 // Initialize managers
 const uwpManager = new UWPInstanceManager();
@@ -12,6 +13,15 @@ const syncManager = new AccountSyncManager();
 
 // Initialize UWP manager on startup
 uwpManager.initialize().catch(console.error);
+
+// Start process detection
+robloxProcessDetector.startMonitoring({
+  includePlayer: true,
+  includeStudio: true,
+  includeUWP: true,
+  detectUsernames: true,
+  monitorResources: true
+}).catch(console.error);
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Account routes
@@ -385,6 +395,70 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json({ message: "Windows organized successfully" });
     } catch (error: any) {
       res.status(500).json({ error: error.message || "Failed to organize windows" });
+    }
+  });
+
+  // Roblox Process Detection Routes
+  app.get("/api/roblox/processes", async (req, res) => {
+    try {
+      const processes = robloxProcessDetector.getDetectedProcesses();
+      res.json(processes);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message || "Failed to get processes" });
+    }
+  });
+
+  app.get("/api/roblox/processes/stats", async (req, res) => {
+    try {
+      const stats = robloxProcessDetector.getStatistics();
+      res.json(stats);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message || "Failed to get process statistics" });
+    }
+  });
+
+  app.post("/api/roblox/processes/:pid/link", async (req, res) => {
+    try {
+      const pid = parseInt(req.params.pid);
+      const { username } = req.body;
+      
+      if (!username) {
+        return res.status(400).json({ error: "Username is required" });
+      }
+
+      const success = await robloxProcessDetector.linkProcessToUsername(pid, username);
+      if (success) {
+        res.json({ message: "Process linked successfully" });
+      } else {
+        res.status(404).json({ error: "Process not found" });
+      }
+    } catch (error: any) {
+      res.status(500).json({ error: error.message || "Failed to link process" });
+    }
+  });
+
+  app.delete("/api/roblox/processes/:pid", async (req, res) => {
+    try {
+      const pid = parseInt(req.params.pid);
+      const success = await robloxProcessDetector.killProcess(pid);
+      
+      if (success) {
+        res.json({ message: "Process terminated successfully" });
+      } else {
+        res.status(404).json({ error: "Process not found" });
+      }
+    } catch (error: any) {
+      res.status(500).json({ error: error.message || "Failed to terminate process" });
+    }
+  });
+
+  app.get("/api/roblox/processes/username/:username", async (req, res) => {
+    try {
+      const { username } = req.params;
+      const processes = robloxProcessDetector.getProcessesByUsername(username);
+      res.json(processes);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message || "Failed to get processes for username" });
     }
   });
 

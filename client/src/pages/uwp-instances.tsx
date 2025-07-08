@@ -93,10 +93,7 @@ export default function UWPInstancesPage() {
   // Create instance mutation
   const createInstanceMutation = useMutation({
     mutationFn: async (data: { name: string; accountId?: number }) => {
-      return apiRequest("/api/uwp-instances", {
-        method: "POST",
-        body: JSON.stringify(data),
-      });
+      return apiRequest("POST", "/api/uwp-instances", data);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/uwp-instances"] });
@@ -120,10 +117,7 @@ export default function UWPInstancesPage() {
   // Launch instance mutation
   const launchInstanceMutation = useMutation({
     mutationFn: async (data: { id: string; gameId?: string }) => {
-      return apiRequest(`/api/uwp-instances/${data.id}/launch`, {
-        method: "POST",
-        body: JSON.stringify({ gameId: data.gameId }),
-      });
+      return apiRequest("POST", `/api/uwp-instances/${data.id}/launch`, { gameId: data.gameId });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/uwp-instances"] });
@@ -146,9 +140,7 @@ export default function UWPInstancesPage() {
   // Close instance mutation
   const closeInstanceMutation = useMutation({
     mutationFn: async (id: string) => {
-      return apiRequest(`/api/uwp-instances/${id}/close`, {
-        method: "POST",
-      });
+      return apiRequest("POST", `/api/uwp-instances/${id}/close`);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/uwp-instances"] });
@@ -169,9 +161,7 @@ export default function UWPInstancesPage() {
   // Remove instance mutation
   const removeInstanceMutation = useMutation({
     mutationFn: async (id: string) => {
-      return apiRequest(`/api/uwp-instances/${id}`, {
-        method: "DELETE",
-      });
+      return apiRequest("DELETE", `/api/uwp-instances/${id}`);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/uwp-instances"] });

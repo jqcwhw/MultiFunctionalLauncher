@@ -8,13 +8,15 @@ import {
   GamepadIcon,
   Shield,
   Link2,
-  Zap
+  Zap,
+  Search
 } from "lucide-react";
 
 const navigation = [
   { name: "Dashboard", href: "/", icon: Monitor },
   { name: "Legacy Instances", href: "/instances", icon: GamepadIcon },
   { name: "UWP Instances", href: "/uwp-instances", icon: Shield },
+  { name: "Process Detection", href: "/roblox-processes", icon: Search },
   { name: "Enhanced System", href: "/enhanced-system", icon: Zap },
   { name: "Sync Manager", href: "/sync-manager", icon: Link2 },
   { name: "Accounts", href: "/accounts", icon: Users },
