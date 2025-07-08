@@ -9,6 +9,7 @@ import Accounts from "@/pages/accounts";
 import Instances from "@/pages/instances";
 import UWPInstances from "@/pages/uwp-instances";
 import SyncManager from "@/pages/sync-manager";
+import EnhancedSystem from "@/pages/enhanced-system";
 import Settings from "@/pages/settings";
 import NotFound from "@/pages/not-found";
 
@@ -23,6 +24,7 @@ function Router() {
           <Route path="/instances" component={Instances} />
           <Route path="/uwp-instances" component={UWPInstances} />
           <Route path="/sync-manager" component={SyncManager} />
+          <Route path="/enhanced-system" component={EnhancedSystem} />
           <Route path="/settings" component={Settings} />
           <Route component={NotFound} />
         </Switch>

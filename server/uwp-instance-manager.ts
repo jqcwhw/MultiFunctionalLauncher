@@ -1,9 +1,12 @@
+import { EventEmitter } from 'events';
 import { exec, spawn } from 'child_process';
 import { promisify } from 'util';
 import * as fs from 'fs';
 import * as path from 'path';
 import * as xml2js from 'xml2js';
 import { v4 as uuidv4 } from 'uuid';
+import { robloxMutexManager } from './roblox-mutex-manager';
+import { robloxRegistryManager } from './roblox-registry-manager';
 
 const execAsync = promisify(exec);
 
@@ -25,7 +28,7 @@ export interface UWPInstance {
   windowPosition?: { x: number; y: number; width: number; height: number };
 }
 
-export class UWPInstanceManager {
+export class UWPInstanceManager extends EventEmitter {
   private instances: Map<string, UWPInstance> = new Map();
   private robloxUWPPath: string = '';
   private robloxPublisherId: string = '';
@@ -33,6 +36,7 @@ export class UWPInstanceManager {
   private resourceMonitor: NodeJS.Timeout | null = null;
 
   constructor() {
+    super();
     this.moddedClientsPath = path.join(process.cwd(), 'ModdedRobloxClients');
     this.initializeResourceMonitoring();
   }
@@ -42,10 +46,36 @@ export class UWPInstanceManager {
    */
   async initialize(): Promise<void> {
     try {
+      // Step 1: Skip registry operations in non-Windows environments
+      if (process.platform === 'win32') {
+        console.log('Enabling multi-instance registry support...');
+        await robloxRegistryManager.enableMultiInstance();
+        
+        // Step 2: Create Roblox singleton mutex
+        console.log('Creating Roblox multi-instance mutex...');
+        try {
+          const mutexResult = await robloxMutexManager.createMutexPowerShell();
+          console.log(`Mutex status: ${mutexResult.isActive ? 'Active' : 'Failed'}`);
+        } catch (mutexError) {
+          console.log('Mutex creation failed, but continuing with UWP method');
+        }
+      } else {
+        console.log('Non-Windows environment detected, skipping registry and mutex operations');
+      }
+      
+      // Step 3: Enable Windows Developer Mode
       await this.enableDeveloperMode();
+      
+      // Step 4: Find Roblox UWP installation
       await this.findRobloxUWPPath();
+      
+      // Step 5: Setup modded clients directory
       await this.ensureModdedClientsDirectory();
+      
+      // Step 6: Scan for existing instances
       await this.scanExistingInstances();
+      
+      console.log('UWP Instance Manager initialized successfully with enhanced multi-instance support');
     } catch (error) {
       throw new Error(`Failed to initialize UWP Instance Manager: ${error}`);
     }

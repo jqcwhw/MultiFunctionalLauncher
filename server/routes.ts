@@ -496,6 +496,73 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Enhanced Roblox Multi-Instance API Routes  
+  app.get('/api/roblox/mutex-status', async (req, res) => {
+    try {
+      const { robloxMutexManager } = await import('./roblox-mutex-manager');
+      const status = robloxMutexManager.getStatus();
+      res.json(status);
+    } catch (error) {
+      res.status(500).json({ 
+        error: 'Failed to get mutex status',
+        details: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  });
+
+  app.post('/api/roblox/mutex/create', async (req, res) => {
+    try {
+      const { robloxMutexManager } = await import('./roblox-mutex-manager');
+      const result = await robloxMutexManager.createMutexPowerShell();
+      res.json(result);
+    } catch (error) {
+      res.status(500).json({ 
+        error: 'Failed to create mutex',
+        details: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  });
+
+  app.get('/api/roblox/enhanced-processes', async (req, res) => {
+    try {
+      const { enhancedProcessManager } = await import('./enhanced-process-manager');
+      const processes = enhancedProcessManager.getRunningProcesses();
+      res.json(processes);
+    } catch (error) {
+      res.status(500).json({ 
+        error: 'Failed to get enhanced processes',
+        details: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  });
+
+  app.post('/api/roblox/enhanced-processes/launch', async (req, res) => {
+    try {
+      const { enhancedProcessManager } = await import('./enhanced-process-manager');
+      const { instanceId, accountId, roblosecurityToken, gameUrl, windowPosition, resourceLimits } = req.body;
+      
+      if (!instanceId) {
+        return res.status(400).json({ error: 'Instance ID is required' });
+      }
+
+      const process = await enhancedProcessManager.launchInstance({
+        instanceId,
+        accountId,
+        roblosecurityToken,
+        gameUrl,
+        windowPosition,
+        resourceLimits
+      });
+      
+      res.json(process);
+    } catch (error) {
+      res.status(500).json({ 
+        error: 'Failed to launch enhanced process',
+        details: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }

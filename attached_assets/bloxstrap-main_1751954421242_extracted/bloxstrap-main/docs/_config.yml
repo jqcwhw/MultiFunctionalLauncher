@@ -1,0 +1,90 @@
+# Jekyll Configuration for Bloxstrap Documentation
+title: "Bloxstrap - Ultimate Roblox Launcher"
+description: "The most advanced Roblox launcher with FastFlags, custom themes, Discord Rich Presence, and complete offline setup capabilities. Enhance your Roblox gaming experience with performance optimizations."
+
+# SEO Settings
+url: "https://bloxstrap-launcher.github.io"
+baseurl: "/bloxstrap"
+lang: "en-US"
+
+# Author Information
+author:
+  name: "Bloxstrap Team"
+  email: "support@bloxstrap.dev"
+  twitter: "@bloxstrap"
+
+# Social Links
+social:
+  name: Bloxstrap
+  links:
+    - https://github.com/Bloxstrap-Launcher/bloxstrap
+    - https://discord.gg/nKjV3mGq6R
+    - https://twitter.com/bloxstrap
+
+# SEO Tags
+tagline: "Ultimate Roblox Launcher Experience"
+keywords: "Bloxstrap, Roblox launcher, FastFlags, Roblox optimization, custom Roblox client, Roblox performance, Discord Rich Presence, offline Roblox setup, Roblox enhancement tool, gaming launcher, Windows game launcher, Roblox utilities, game performance boost, FPS unlocker Roblox"
+
+# Theme
+theme: minima
+remote_theme: pages-themes/minimal@v0.2.0
+
+# Plugins
+plugins:
+  - jekyll-feed
+  - jekyll-sitemap
+  - jekyll-seo-tag
+  - jekyll-github-metadata
+
+# Build settings
+markdown: kramdown
+highlighter: rouge
+kramdown:
+  input: GFM
+  syntax_highlighter: rouge
+
+# Collections
+collections:
+  guides:
+    output: true
+    permalink: /:collection/:name/
+
+# Defaults
+defaults:
+  - scope:
+      path: ""
+      type: "pages"
+    values:
+      layout: "default"
+  - scope:
+      path: ""
+      type: "guides"
+    values:
+      layout: "guide"
+
+# Navigation
+navigation:
+  - title: "Home"
+    url: "/"
+  - title: "Download"
+    url: "https://github.com/Bloxstrap-Launcher/bloxstrap/releases/latest"
+  - title: "Guides"
+    url: "/guides/"
+  - title: "Discord"
+    url: "https://discord.gg/nKjV3mGq6R"
+  - title: "GitHub"
+    url: "https://github.com/Bloxstrap-Launcher/bloxstrap"
+
+# Google Analytics (replace with actual ID)
+google_analytics: "G-XXXXXXXXXX"
+
+# Exclude from processing
+exclude:
+  - Gemfile
+  - Gemfile.lock
+  - node_modules
+  - vendor/bundle/
+  - vendor/cache/
+  - vendor/gems/
+  - vendor/ruby/
+  - README.md 

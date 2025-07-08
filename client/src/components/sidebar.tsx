@@ -7,13 +7,15 @@ import {
   Activity,
   GamepadIcon,
   Shield,
-  Link2
+  Link2,
+  Zap
 } from "lucide-react";
 
 const navigation = [
   { name: "Dashboard", href: "/", icon: Monitor },
   { name: "Legacy Instances", href: "/instances", icon: GamepadIcon },
   { name: "UWP Instances", href: "/uwp-instances", icon: Shield },
+  { name: "Enhanced System", href: "/enhanced-system", icon: Zap },
   { name: "Sync Manager", href: "/sync-manager", icon: Link2 },
   { name: "Accounts", href: "/accounts", icon: Users },
   { name: "Settings", href: "/settings", icon: Settings },
