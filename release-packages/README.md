@@ -1,178 +1,131 @@
-# Roblox Multi-Instance Manager - Release Packages
+# Roblox Multi-Instance Manager - Release Package
 
-## 📦 Available Downloads
+## 🎮 What This Does
 
-### RobloxMultiManager-Portable-v1.0.zip (Recommended for End Users)
-**Perfect for users who want to get started immediately**
+This is a **real, working multi-instance system** for Roblox that uses proven techniques from 19+ researched projects including:
 
-**What's included:**
-- ✅ Ready-to-run portable application
-- ✅ Windows launcher (start.bat)
-- ✅ Mac/Linux launcher (start.sh)
-- ✅ Complete setup instructions
-- ✅ Implementation documentation
-- ✅ No installation required!
-
-**How to use:**
-1. Download and extract the zip file
-2. Run the appropriate launcher for your platform
-3. Application opens in your browser automatically
-
----
-
-### RobloxMultiManager-Development-v1.0.zip (For Developers)
-**Perfect for developers who want to customize or contribute**
-
-**What's included:**
-- ✅ Complete source code
-- ✅ All server components and managers
-- ✅ React frontend source
-- ✅ Build scripts and configuration
-- ✅ Anti-detection research documentation
-- ✅ Development setup instructions
-
-**How to use:**
-1. Download and extract the zip file
-2. Install Node.js dependencies: `npm install`
-3. Run development server: `npm run dev`
-4. Build for production: `npm run build`
-
----
+- **MultiBloxy** by Zgoly (C# mutex bypass)
+- **MultiRoblox** by Dashbloxx (C implementation)  
+- **UWP Multi-Platform** (Package cloning technique)
+- **Working AutoHotkey scripts** for multi-client management
 
 ## 🚀 Quick Start
 
-### For Regular Users (Portable Version)
-1. Download: `RobloxMultiManager-Portable-v1.0.zip`
-2. Extract anywhere on your computer
-3. Windows: Double-click `start.bat`
-4. Mac/Linux: Run `./start.sh` in terminal
-5. Application opens in browser at `http://localhost:3000`
+### Windows Users
+1. Download the portable package
+2. Double-click `START_WINDOWS.bat`
+3. Browser opens automatically to http://localhost:3000
+4. Start launching multiple Roblox instances!
 
-### For Developers (Development Version)  
-1. Download: `RobloxMultiManager-Development-v1.0.zip`
-2. Extract and open terminal in the folder
-3. Install dependencies: `npm install`
-4. Start development: `npm run dev`
-5. Application available at `http://localhost:5000`
+### Mac/Linux Users  
+1. Download the portable package
+2. Open terminal in the folder
+3. Run: `./START_UNIX.sh`
+4. Open browser to http://localhost:3000
 
-## 🔧 System Requirements
+## 🔧 How It Works
 
-### All Platforms
-- **Node.js 16+** (required for both versions)
-- **4GB RAM minimum** (8GB recommended)
-- **500MB storage space**
-- **Modern web browser** (Chrome, Firefox, Safari, Edge)
+### Core Multi-Instance Technique
+Uses the **ROBLOX_singletonEvent mutex bypass** technique:
 
-### Windows (Full Features)
-- **Windows 10/11**
-- **Administrator privileges** (for advanced features)
-- **Roblox UWP app** (for UWP instance management)
+1. **Mutex Creation**: Creates `ROBLOX_singletonEvent` mutex before Roblox does
+2. **Registry Modification**: Modifies Windows registry for multi-client support
+3. **Process Spawning**: Launches multiple `RobloxPlayerBeta.exe` processes  
+4. **UWP Cloning**: Creates cloned UWP packages with unique identities
 
-### Mac/Linux (Basic Features)
-- **macOS 10.15+** or **modern Linux distribution**
-- Basic multi-instance support (some Windows-specific features unavailable)
+### Supported Methods
+- **Direct Execution**: Spawns RobloxPlayerBeta.exe directly
+- **Protocol Handler**: Uses roblox-player: protocol
+- **UWP Shell**: Clones and registers UWP packages
+- **PowerShell**: Advanced Windows-specific launching
 
-## 🛡️ Anti-Detection Features
+## 🎯 Features
 
-### Currently Implemented (85% Success Rate)
-- ✅ **ROBLOX_singletonMutex Bypass** (95% effective)
-- ✅ **Registry Isolation** (85% effective)
-- ✅ **UWP Package Cloning** (90% effective)
-- ✅ **Authentication Management** (95% effective)
-- ✅ **Window Management** (90% effective)
+- **Real Multi-Instance**: Actually launches multiple Roblox processes
+- **Account Management**: Support for .ROBLOSECURITY cookies
+- **Game URL Support**: Direct game joining with place IDs
+- **Resource Monitoring**: CPU, memory, and process tracking
+- **Cross-Platform**: Works on Windows, Mac, and Linux (Windows for full functionality)
 
-### Research-Based Future Enhancements (95% Projected Success)
-- 📋 Memory injection and DLL hooking
-- 📋 Network proxy isolation
-- 📋 Hardware fingerprint spoofing
-- 📋 Behavior randomization
-- 📋 File system isolation
+## 🔬 Technical Details
 
-## 📚 Documentation Included
+### Anti-Detection Methods
+Based on analysis of 19+ projects:
+- Mutex management for singleton bypass
+- Process isolation techniques  
+- Registry modification (Windows)
+- UWP package cloning with unique identities
 
-### Setup Instructions (SETUP_INSTRUCTIONS.md)
-- Step-by-step installation guide
-- Platform-specific setup procedures
-- Troubleshooting common issues
-- Performance optimization tips
+### Architecture
+- **Frontend**: Modern web interface with real-time updates
+- **Backend**: Node.js server with Express
+- **Engine**: Custom multi-instance engine based on research
+- **Platform**: Cross-platform with Windows optimizations
 
-### Implementation Guide (IMPLEMENTATION_GUIDE.md)
-- Technical implementation details
-- Anti-detection methods analysis
-- 19+ analyzed projects documentation
-- Architecture and design patterns
+## 🛠️ Troubleshooting
 
-### Release Notes (RELEASE_NOTES.md)
-- Complete feature list
-- Performance benchmarks
-- Future roadmap
-- Version history
+### Common Issues
+1. **"No Roblox installation found"**: Install Roblox from official website
+2. **"Permission denied"**: Run as administrator on Windows
+3. **"Port 3000 already in use"**: Change PORT in server.js
+4. **"Mutex creation failed"**: Restart application or system
 
-## 🎯 Use Cases
+### Debug Mode
+Set `DEBUG=true` in server.js for detailed logging.
 
-### Legitimate Applications
-- ✅ **Game Development Testing** - Test across multiple accounts
-- ✅ **Family Account Management** - Manage children's accounts safely
-- ✅ **Educational Purposes** - Teaching game development concepts
-- ✅ **Performance Testing** - Load testing game environments
+## 📁 Package Contents
 
-### Not Intended For
-- ❌ Terms of Service violations
-- ❌ Exploiting or automated cheating
-- ❌ Commercial botting operations
-- ❌ Any malicious activities
+### Portable Version
+- `server.js` - Main server application
+- `real-multi-instance.js` - Core multi-instance engine
+- `public/index.html` - Web interface
+- `START_WINDOWS.bat` - Windows launcher
+- `START_UNIX.sh` - Mac/Linux launcher
+- `package.json` - Dependencies
 
-## 🔒 Security & Privacy
+### Development Version
+- Complete source code
+- Documentation and implementation guides
+- Research analysis from 19+ projects
+- Build scripts and configuration
 
-### Data Protection
-- **Local-only operation** - No external data collection
-- **Zero telemetry** - No usage tracking or analytics
-- **Secure token storage** - Encrypted authentication handling
-- **Open source transparency** - All code available for review
+## 🎮 Usage Examples
 
-### System Security
-- **Minimal system access** - Only necessary permissions
-- **Clean installation/removal** - No persistent system changes
-- **Antivirus compatible** - Uses legitimate system operations
-- **Sandboxed processes** - Isolated instance management
+### Launch Instance with Game URL
+```javascript
+// Via web interface
+Instance ID: "player1"
+Game URL: "https://www.roblox.com/games/606849621/Jailbreak"
+Launch Method: "Auto"
+```
 
-## 📞 Support
+### Quick Game Launch
+Use the Quick Launch buttons for popular games:
+- Jailbreak
+- Prison Life  
+- Build A Boat
+- Roblox Home
 
-### Getting Help
-1. **Read the documentation** - Most issues covered in setup guide
-2. **Check system requirements** - Ensure Node.js 16+ is installed
-3. **Try different platforms** - Test both portable and development versions
-4. **Run as administrator** - May resolve Windows-specific issues
+### Authentication
+Add .ROBLOSECURITY cookies for account authentication:
+```
+Auth Cookie: "_|WARNING:-DO-NOT-SHARE-THIS.--Sharing-this-will-allow-someone-to-log-in-as-you-and-to-steal-your-ROBUX-and-items.|_..."
+```
 
-### Common Solutions
-- **"Node.js not found"** - Install from [nodejs.org](https://nodejs.org/)
-- **"Port in use"** - Application automatically finds available port
-- **Windows Security warnings** - Allow application and add to exclusions
-- **Features not working** - Some require Windows platform
+## 🔬 Research Sources
 
-## ⚖️ Legal & Ethical Use
+This implementation is based on comprehensive analysis of:
+- MultiBloxy by Zgoly (ROBLOX_singletonEvent mutex)
+- MultiRoblox by Dashbloxx (Simple C implementation)
+- UWP_MultiPlatform (AppxManifest cloning)
+- Flarial Launcher (Modern techniques)
+- Working AutoHotkey scripts (Multi-client management)
+- 14+ additional multi-instance projects
 
-### Important Notes
-- **Respect Roblox Terms of Service** - Use only for legitimate purposes
-- **Educational and development focus** - Designed for learning and testing
-- **No warranty provided** - Use at your own risk and responsibility
-- **Community contribution** - Based on open research and analysis
+## 📜 License
 
-### Recommended Practices
-- **Use your own accounts** - Don't access accounts you don't own
-- **Respect game rules** - Don't use for unfair advantages
-- **Test responsibly** - Don't overload game servers
-- **Stay updated** - Keep the application current for best compatibility
+MIT License - Based on open-source research and community contributions.
 
----
+## ⚠️ Disclaimer
 
-## 🎉 Ready to Get Started?
-
-Choose the package that best fits your needs:
-
-**🔰 New User?** → Download the **Portable version** for immediate use  
-**🛠️ Developer?** → Download the **Development version** for customization
-
-Both packages include complete documentation and support for multiple platforms!
-
-**Download, extract, and start managing multiple Roblox instances with advanced anti-detection features!**
+This tool is for educational and legitimate multi-account management purposes. Always follow Roblox's Terms of Service. Use responsibly.
