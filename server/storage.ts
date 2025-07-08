@@ -83,6 +83,8 @@ export class MemStorage implements IStorage {
       ...insertAccount,
       id: this.currentAccountId++,
       createdAt: new Date(),
+      roblosecurityToken: insertAccount.roblosecurityToken ?? null,
+      isActive: insertAccount.isActive ?? true,
     };
     this.accounts.set(account.id, account);
     return account;
@@ -132,6 +134,12 @@ export class MemStorage implements IStorage {
       id: this.currentInstanceId++,
       createdAt: new Date(),
       lastStarted: null,
+      status: insertInstance.status ?? 'stopped',
+      accountId: insertInstance.accountId ?? null,
+      processId: insertInstance.processId ?? null,
+      port: insertInstance.port ?? null,
+      gameId: insertInstance.gameId ?? null,
+      config: insertInstance.config ?? null,
     };
     this.instances.set(instance.id, instance);
     return instance;
@@ -176,6 +184,7 @@ export class MemStorage implements IStorage {
       ...insertLog,
       id: this.currentLogId++,
       timestamp: new Date(),
+      instanceId: insertLog.instanceId ?? null,
     };
     this.activityLogs.set(log.id, log);
     return log;

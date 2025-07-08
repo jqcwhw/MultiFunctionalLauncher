@@ -9,7 +9,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/accounts", async (req, res) => {
     try {
       const accounts = await storage.getAccounts();
-      res.json(accounts);
+      const accountsWithInstances = await Promise.all(
+        accounts.map(async (account) => {
+          const instances = await storage.getInstancesByAccount(account.id);
+          return { ...account, instances };
+        })
+      );
+      res.json(accountsWithInstances);
     } catch (error) {
       res.status(500).json({ error: "Failed to fetch accounts" });
     }

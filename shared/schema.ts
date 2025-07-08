@@ -48,7 +48,6 @@ export const insertAccountSchema = createInsertSchema(accounts).omit({
 export const insertInstanceSchema = createInsertSchema(instances).omit({
   id: true,
   createdAt: true,
-  lastStarted: true,
 });
 
 export const insertActivityLogSchema = createInsertSchema(activityLogs).omit({
