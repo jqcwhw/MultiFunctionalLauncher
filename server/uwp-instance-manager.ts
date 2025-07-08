@@ -46,21 +46,27 @@ export class UWPInstanceManager extends EventEmitter {
    */
   async initialize(): Promise<void> {
     try {
-      // Step 1: Skip registry operations in non-Windows environments
-      if (process.platform === 'win32') {
-        console.log('Enabling multi-instance registry support...');
-        await robloxRegistryManager.enableMultiInstance();
+      // Check if we're on Windows
+      if (process.platform !== 'win32') {
+        console.log('Non-Windows environment detected. UWP Instance Manager will run in demo mode.');
+        console.log('UWP features are only available on Windows systems.');
         
-        // Step 2: Create Roblox singleton mutex
-        console.log('Creating Roblox multi-instance mutex...');
-        try {
-          const mutexResult = await robloxMutexManager.createMutexPowerShell();
-          console.log(`Mutex status: ${mutexResult.isActive ? 'Active' : 'Failed'}`);
-        } catch (mutexError) {
-          console.log('Mutex creation failed, but continuing with UWP method');
-        }
-      } else {
-        console.log('Non-Windows environment detected, skipping registry and mutex operations');
+        // Create some demo instances for non-Windows environments
+        await this.createDemoInstances();
+        return;
+      }
+
+      // Step 1: Enable multi-instance registry support
+      console.log('Enabling multi-instance registry support...');
+      await robloxRegistryManager.enableMultiInstance();
+      
+      // Step 2: Create Roblox singleton mutex
+      console.log('Creating Roblox multi-instance mutex...');
+      try {
+        const mutexResult = await robloxMutexManager.createMutexPowerShell();
+        console.log(`Mutex status: ${mutexResult.isActive ? 'Active' : 'Failed'}`);
+      } catch (mutexError) {
+        console.log('Mutex creation failed, but continuing with UWP method');
       }
       
       // Step 3: Enable Windows Developer Mode
@@ -77,7 +83,9 @@ export class UWPInstanceManager extends EventEmitter {
       
       console.log('UWP Instance Manager initialized successfully with enhanced multi-instance support');
     } catch (error) {
-      throw new Error(`Failed to initialize UWP Instance Manager: ${error}`);
+      console.error(`UWP Instance Manager initialization failed: ${error}`);
+      // Don't throw error to prevent app crash - create demo instances instead
+      await this.createDemoInstances();
     }
   }
 
@@ -85,6 +93,11 @@ export class UWPInstanceManager extends EventEmitter {
    * Enable Windows Developer Mode (required for UWP sideloading)
    */
   private async enableDeveloperMode(): Promise<void> {
+    if (process.platform !== 'win32') {
+      console.log('Skipping developer mode setup on non-Windows platform');
+      return;
+    }
+    
     const command = 'reg add "HKLM\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\AppModelUnlock" /t REG_DWORD /f /v AllowAllTrustedApps /d 1';
     try {
       await execAsync(command);
@@ -97,6 +110,13 @@ export class UWPInstanceManager extends EventEmitter {
    * Find the installed Roblox UWP package path
    */
   private async findRobloxUWPPath(): Promise<void> {
+    if (process.platform !== 'win32') {
+      console.log('Skipping Roblox UWP path detection on non-Windows platform');
+      this.robloxUWPPath = '/demo/roblox/path';
+      this.robloxPublisherId = 'DEMO_PUBLISHER_ID';
+      return;
+    }
+    
     const command = 'powershell "Get-AppxPackage *Roblox* | Format-List -Property InstallLocation"';
     
     try {
@@ -137,6 +157,11 @@ export class UWPInstanceManager extends EventEmitter {
    * Scan for existing modded instances
    */
   private async scanExistingInstances(): Promise<void> {
+    if (process.platform !== 'win32') {
+      console.log('Skipping instance scanning on non-Windows platform');
+      return;
+    }
+    
     const command = 'powershell "Get-AppxPackage *ROBLOXCORPORATION.ROBLOX.* | Format-List -Property Name"';
     
     try {
@@ -169,6 +194,40 @@ export class UWPInstanceManager extends EventEmitter {
     } catch (error) {
       console.error('Failed to scan existing instances:', error);
     }
+  }
+
+  /**
+   * Create demo instances for non-Windows environments
+   */
+  private async createDemoInstances(): Promise<void> {
+    const demoInstances = [
+      {
+        id: 'demo-1',
+        name: 'Demo_Instance_1',
+        displayName: 'Roblox Demo Instance 1',
+        packageName: 'ROBLOXCORPORATION.ROBLOX.Demo1',
+        path: '/demo/path/instance1',
+        publisherId: 'DEMO_PUBLISHER_ID',
+        isRunning: false,
+        resourceUsage: { cpu: 0, memory: 0, gpu: 0 }
+      },
+      {
+        id: 'demo-2',
+        name: 'Demo_Instance_2',
+        displayName: 'Roblox Demo Instance 2',
+        packageName: 'ROBLOXCORPORATION.ROBLOX.Demo2',
+        path: '/demo/path/instance2',
+        publisherId: 'DEMO_PUBLISHER_ID',
+        isRunning: false,
+        resourceUsage: { cpu: 0, memory: 0, gpu: 0 }
+      }
+    ];
+
+    for (const instance of demoInstances) {
+      this.instances.set(instance.id, instance);
+    }
+    
+    console.log('Created demo instances for non-Windows environment');
   }
 
   /**
@@ -242,6 +301,15 @@ export class UWPInstanceManager extends EventEmitter {
       throw new Error('Instance not found');
     }
 
+    // For non-Windows platforms, simulate launch
+    if (process.platform !== 'win32') {
+      console.log(`Demo launch: ${instance.displayName} ${gameId ? `(Game: ${gameId})` : ''}`);
+      instance.isRunning = true;
+      instance.processId = Math.floor(Math.random() * 10000) + 1000;
+      this.instances.set(instanceId, instance);
+      return;
+    }
+
     // Check resource constraints before launching
     if (await this.isResourceConstraintExceeded()) {
       throw new Error('Resource constraints exceeded. Close other instances first.');
@@ -285,6 +353,16 @@ export class UWPInstanceManager extends EventEmitter {
     }
 
     try {
+      // For non-Windows platforms, simulate close
+      if (process.platform !== 'win32') {
+        console.log(`Demo close: ${instance.displayName}`);
+        instance.isRunning = false;
+        instance.processId = undefined;
+        instance.resourceUsage = { cpu: 0, memory: 0, gpu: 0 };
+        this.instances.set(instanceId, instance);
+        return;
+      }
+
       // Gracefully close the process
       await execAsync(`taskkill /PID ${instance.processId} /F`);
       
@@ -311,6 +389,13 @@ export class UWPInstanceManager extends EventEmitter {
       // Close if running
       if (instance.isRunning) {
         await this.closeInstance(instanceId);
+      }
+
+      // For non-Windows platforms, just remove from memory
+      if (process.platform !== 'win32') {
+        console.log(`Demo remove: ${instance.displayName}`);
+        this.instances.delete(instanceId);
+        return;
       }
 
       // Unregister the package

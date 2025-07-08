@@ -23,6 +23,11 @@ export class RobloxRegistryManager {
    * Create registry modifications for multi-instance support
    */
   async enableMultiInstance(): Promise<void> {
+    if (process.platform !== 'win32') {
+      console.log('Non-Windows environment detected. Registry management not available.');
+      return;
+    }
+
     try {
       console.log('Creating registry backups before modifications...');
       await this.createBackups();

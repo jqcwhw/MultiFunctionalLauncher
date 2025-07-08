@@ -169,18 +169,21 @@ export class RobloxMutexManager extends EventEmitter {
         this.mutexProcess = null;
       }
 
-      // Also kill any existing RobloxPlayerBeta processes that might hold the mutex
-      try {
-        await execAsync('taskkill /F /IM RobloxPlayerBeta.exe 2>nul');
-      } catch (e) {
-        // Ignore errors if no processes found
-      }
+      // Windows-specific cleanup
+      if (process.platform === 'win32') {
+        // Also kill any existing RobloxPlayerBeta processes that might hold the mutex
+        try {
+          await execAsync('taskkill /F /IM RobloxPlayerBeta.exe 2>nul');
+        } catch (e) {
+          // Ignore errors if no processes found
+        }
 
-      // Kill any other mutex manager processes
-      try {
-        await execAsync('taskkill /F /IM temp_mutex_manager.exe 2>nul');
-      } catch (e) {
-        // Ignore errors if no processes found
+        // Kill any other mutex manager processes
+        try {
+          await execAsync('taskkill /F /IM temp_mutex_manager.exe 2>nul');
+        } catch (e) {
+          // Ignore errors if no processes found
+        }
       }
 
       this.isActive = false;
@@ -209,6 +212,15 @@ export class RobloxMutexManager extends EventEmitter {
    * Alternative PowerShell-based mutex creation for environments without C# compiler
    */
   async createMutexPowerShell(): Promise<MutexStatus> {
+    // Check if we're on Windows
+    if (process.platform !== 'win32') {
+      console.log('Non-Windows environment detected. Mutex management not available.');
+      return { 
+        isActive: false, 
+        error: 'Mutex management is only available on Windows systems' 
+      };
+    }
+
     try {
       const script = `
         Add-Type -TypeDefinition @"
