@@ -1,0 +1,93 @@
+CLIENT_LIST_GOLDEN_EGGS_COLUMN),
+            "daycareSlots", clientList.GetText(A_Index, CLIENT_LIST_DAYCARE_SLOTS_COLUMN),
+            "daycareUse", daycare,
+            "hatchEggs", hatchEggs
+        )
+        addActionToQueue(clientId, "Initialise Client", A_Now)
+        if daycare        
+            addActionToQueue(clientId, "Daycare", A_Now)
+        addActionToQueue(clientId, "Apply Auto Hatch", A_Now)
+        addActionToQueue(clientId, "Teleport Best Zone", A_Now)
+        
+        if hatchEggs {
+            addActionToQueue(clientId, "Move To Best Egg", A_Now)
+            addActionToQueue(clientId, "Hatch Best Egg", A_Now)
+        }
+        addActionToQueue(clientId, "Farm Best Zone", A_Now)
+        addActionToQueue(clientId, "Place Flag", A_Now)
+        addActionToQueue(clientId, "Place Sprinkler", A_Now)
+        addActionToQueue(clientId, "Start Event", A_Now)
+        addActionToQueue(clientId, "Use Ultimate", A_Now)
+        
+        WinSetTitle("Roblox (" CLIENT_MAP[clientId]["name"] ")", "ahk_id " clientId)     
+    }
+
+    Loop {
+        if actionList.GetCount() = 0 {
+            MsgBox "No actions to process, stopping macro.", MACRO_TITLE, 16
+            return
+        }
+
+        clientId := actionList.GetText(1, 1)
+        action := actionList.GetText(1, 3),
+        eventTime := actionList.GetText(1, 4)
+
+        if A_Now > eventTime {
+            activateWindow(clientId)
+            closeLeaderboard()
+            closeChatLog()
+            Sleep 1000
+
+            switch action {
+                case "Initialise Client":
+                    initialiseClient(clientId)
+                case "Apply Auto Hatch":
+                    applyAutoHatchSettings(clientId)
+                case "Teleport Best Zone":
+                    teleportToBestZone()
+                case "Move To Best Egg":
+                    moveToBestEgg()
+                case "Hatch Best Egg":
+                    hatchEgg(clientId)
+                case "Farm Best Zone":
+                    farmBestZone(hatchEggs)
+                case "Place Flag":
+                    placeFlag(clientId)
+                    addActionToQueue(clientId, "Place Flag", DateAdd(A_Now, 5, "Minutes"))                      
+                case "Place Sprinkler":
+                    placeSprinkler(clientId)
+                    addActionToQueue(clientId, "Place Sprinkler", DateAdd(A_Now, 5, "Minutes"))       
+                case "Start Event":
+                    startEvent(clientId)
+                    addActionToQueue(clientId, "Start Event", DateAdd(A_Now, 5, "Seconds"))                    
+                case "Use Ultimate":
+                    useUltimate(clientId)
+                    addActionToQueue(clientId, "Use Ultimate", DateAdd(A_Now, 2, "Minutes"))                    
+                case "Change Worlds":
+                    changeWorlds(clientId)
+                case "Daycare":
+                    dayCare := 30
+                    useDaycare(clientId)
+                    addActionToQueue(clientId, "Move Away From Egg", DateAdd(A_Now, dayCare, "Minutes"))
+                    addActionToQueue(clientId, "Daycare", DateAdd(A_Now, dayCare, "Minutes"))
+                    addActionToQueue(clientId, "Teleport Best Zone", DateAdd(A_Now, dayCare, "Minutes"))
+                    addActionToQueue(clientId, "Move To Best Egg", DateAdd(A_Now, dayCare, "Minutes"))
+                    addActionToQueue(clientId, "Hatch Best Egg", DateAdd(A_Now, dayCare, "Minutes"))
+                    addActionToQueue(clientId, "Farm Best Zone", DateAdd(A_Now, dayCare, "Minutes"))                
+                case "Move Away From Egg":
+                    moveAwayFromEgg()
+                case "Move Back To Egg":
+                    moveBackToEgg()                    
+                default:
+            }
+            
+            actionList.Delete(1)
+            actionList.ModifyCol(4, "Sort")
+        }
+
+    }
+}
+
+initialiseClient(clientId) {
+    zoomCameraOut(2000)
+}

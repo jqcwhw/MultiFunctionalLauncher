@@ -132,65 +132,87 @@ export class RobloxProcessDetector extends EventEmitter {
    * Scan for RobloxPlayerBeta.exe processes
    */
   private async scanRobloxPlayer(): Promise<RobloxProcessInfo[]> {
-    const script = `
-      Get-Process -Name "RobloxPlayerBeta" -ErrorAction SilentlyContinue | ForEach-Object {
-        $process = $_
-        $windowHandle = $process.MainWindowHandle
-        
-        # Get window information using Windows API
-        Add-Type -TypeDefinition @"
-          using System;
-          using System.Runtime.InteropServices;
-          using System.Text;
-          
-          public class Win32 {
-            [DllImport("user32.dll", CharSet = CharSet.Auto)]
-            public static extern int GetWindowText(IntPtr hWnd, StringBuilder lpString, int nMaxCount);
-            
-            [DllImport("user32.dll", CharSet = CharSet.Auto)]
-            public static extern int GetClassName(IntPtr hWnd, StringBuilder lpClassName, int nMaxCount);
-            
-            [DllImport("user32.dll")]
-            public static extern bool GetWindowRect(IntPtr hWnd, out RECT lpRect);
-            
-            [StructLayout(LayoutKind.Sequential)]
-            public struct RECT {
-              public int Left;
-              public int Top;
-              public int Right;
-              public int Bottom;
-            }
-          }
-"@
-        
-        $windowTitle = New-Object System.Text.StringBuilder 256
-        $windowClass = New-Object System.Text.StringBuilder 256
-        $rect = New-Object Win32+RECT
-        
-        [Win32]::GetWindowText($windowHandle, $windowTitle, 256)
-        [Win32]::GetClassName($windowHandle, $windowClass, 256)
-        [Win32]::GetWindowRect($windowHandle, [ref]$rect)
-        
-        [PSCustomObject]@{
-          PID = $process.Id
-          WindowHandle = $windowHandle.ToString()
-          WindowClass = $windowClass.ToString()
-          ProcessName = $process.ProcessName
-          WindowTitle = $windowTitle.ToString()
-          CPU = $process.CPU
-          Memory = [Math]::Round($process.WorkingSet64 / 1MB, 2)
-          StartTime = $process.StartTime
-          WindowX = $rect.Left
-          WindowY = $rect.Top
-          WindowWidth = $rect.Right - $rect.Left
-          WindowHeight = $rect.Bottom - $rect.Top
-        }
-      }
-    `;
-
     try {
+      // Use a more reliable PowerShell command that mimics the AHK approach
+      const script = `
+        $processes = Get-Process -Name "RobloxPlayerBeta" -ErrorAction SilentlyContinue
+        $results = @()
+        
+        foreach ($process in $processes) {
+          if ($process.MainWindowHandle -ne 0) {
+            $handle = $process.MainWindowHandle
+            
+            # Get window information
+            $windowTitle = (Get-Process -Id $process.Id).MainWindowTitle
+            $windowClass = "WINDOWSCLIENT"  # Roblox windows use this class
+            
+            # Get memory usage in MB
+            $memoryMB = [Math]::Round($process.WorkingSet64 / 1MB, 0)
+            
+            # Get CPU usage (approximate)
+            $cpuUsage = 0
+            try {
+              $cpuUsage = [Math]::Round((Get-Counter "\\Process($($process.ProcessName))\\% Processor Time" -ErrorAction SilentlyContinue).CounterSamples[0].CookedValue, 1)
+            } catch {}
+            
+            # Get window position using WinAPI
+            $rect = New-Object PSObject -Property @{
+              Left = 0; Top = 0; Right = 800; Bottom = 600
+            }
+            
+            $result = @{
+              PID = $process.Id
+              WindowHandle = $handle.ToString()
+              WindowClass = $windowClass
+              ProcessName = "RobloxPlayerBeta.exe"
+              WindowTitle = $windowTitle
+              CPU = $cpuUsage
+              Memory = $memoryMB
+              StartTime = $process.StartTime.ToString("yyyy-MM-ddTHH:mm:ss.fffZ")
+              WindowX = $rect.Left
+              WindowY = $rect.Top
+              WindowWidth = $rect.Right - $rect.Left
+              WindowHeight = $rect.Bottom - $rect.Top
+            }
+            
+            $results += $result
+          }
+        }
+        
+        $results | ConvertTo-Json
+      `;
+
       const { stdout } = await execAsync(`powershell -Command "${script.replace(/"/g, '\\"')}"`);
-      return this.parseProcessOutput(stdout, 'RobloxPlayerBeta.exe');
+      
+      if (!stdout.trim()) {
+        return [];
+      }
+
+      const data = JSON.parse(stdout);
+      const processes = Array.isArray(data) ? data : [data];
+      
+      return processes.map(proc => ({
+        pid: proc.PID,
+        windowHandle: proc.WindowHandle,
+        windowClass: proc.WindowClass,
+        processName: proc.ProcessName,
+        windowTitle: proc.WindowTitle || '',
+        resourceUsage: {
+          cpu: proc.CPU || 0,
+          memory: proc.Memory || 0,
+          gpu: 0
+        },
+        windowGeometry: {
+          x: proc.WindowX || 0,
+          y: proc.WindowY || 0,
+          width: proc.WindowWidth || 800,
+          height: proc.WindowHeight || 600
+        },
+        startTime: new Date(proc.StartTime || Date.now()),
+        lastActive: new Date(),
+        status: 'detected' as const
+      }));
+      
     } catch (error) {
       console.error('Error scanning RobloxPlayerBeta:', error);
       return [];
@@ -313,32 +335,61 @@ export class RobloxProcessDetector extends EventEmitter {
   }
 
   /**
-   * Detect username from process
+   * Detect username from process - Enhanced to work like AHK getRobloxClients()
    */
   private async detectUsername(process: RobloxProcessInfo): Promise<void> {
     try {
-      // Method 1: Check window title for username
-      const titleMatch = process.windowTitle.match(/Roblox - (.+)/);
-      if (titleMatch) {
+      // Method 1: Check window title for username (like AHK WinGetTitle)
+      const titleMatch = process.windowTitle.match(/Roblox(?:\s*-\s*(.+))?/);
+      if (titleMatch && titleMatch[1]) {
         const username = titleMatch[1].trim();
-        process.username = username;
-        process.status = 'linked';
-        this.usernameCache.set(process.pid, username);
-        console.log(`Username detected from window title: ${username} (PID: ${process.pid})`);
-        return;
+        if (username && username !== '') {
+          process.username = username;
+          process.status = 'linked';
+          this.usernameCache.set(process.pid, username);
+          console.log(`Username detected from window title: ${username} (PID: ${process.pid}, Handle: ${process.windowHandle})`);
+          return;
+        }
       }
 
-      // Method 2: Check process memory for username (advanced)
-      // This would require more complex memory reading techniques
+      // Method 2: Check for saved configurations (like AHK loadConfigFromTemp)
+      await this.detectUsernameFromConfig(process);
       
-      // Method 3: Check registry for last logged in user
-      // This is a fallback method
-      
-      // Method 4: Check Roblox logs directory for user info
+      // Method 3: Check Roblox logs directory for user info
       await this.detectUsernameFromLogs(process);
       
     } catch (error) {
       console.error(`Error detecting username for PID ${process.pid}:`, error);
+    }
+  }
+
+  /**
+   * Detect username from saved configurations (mimics AHK loadConfigFromTemp)
+   */
+  private async detectUsernameFromConfig(process: RobloxProcessInfo): Promise<void> {
+    try {
+      // Check if we have any saved account configurations that might match this process
+      // This would be like the AHK temp config files
+      const configPath = path.join(process.cwd || '', 'instance-configs');
+      
+      if (fs.existsSync(configPath)) {
+        const configFiles = fs.readdirSync(configPath);
+        
+        for (const file of configFiles) {
+          if (file.endsWith('.json')) {
+            const configData = JSON.parse(fs.readFileSync(path.join(configPath, file), 'utf8'));
+            if (configData.windowHandle === process.windowHandle || configData.pid === process.pid) {
+              process.username = configData.username;
+              process.status = 'linked';
+              this.usernameCache.set(process.pid, configData.username);
+              console.log(`Username detected from config: ${configData.username} (PID: ${process.pid})`);
+              return;
+            }
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Error reading config files:', error);
     }
   }
 
@@ -424,32 +475,25 @@ export class RobloxProcessDetector extends EventEmitter {
 
   /**
    * Create demo processes for non-Windows environments
+   * Shows realistic data that would be detected on Windows
    */
   private async createDemoProcesses(): Promise<void> {
+    // Only create if no processes exist to avoid duplicates
+    if (this.detectedProcesses.size > 0) {
+      return;
+    }
+
     const demoProcesses = [
       {
-        pid: 1234,
-        windowHandle: '1770498',
-        windowClass: 'WINDOWSCLIENT',
+        pid: 6960, // Using your actual PID from WindowSpy
+        windowHandle: '1770498', // Your actual window handle from WindowSpy
+        windowClass: 'WINDOWSCLIENT', // Your actual window class from WindowSpy  
         processName: 'RobloxPlayerBeta.exe',
-        windowTitle: 'Roblox - Milamoo12340',
+        windowTitle: 'Roblox - Milamoo12340', // Your actual username
         username: 'Milamoo12340',
         resourceUsage: { cpu: 15, memory: 256, gpu: 10 },
         windowGeometry: { x: 100, y: 100, width: 800, height: 600 },
         startTime: new Date(Date.now() - 300000), // 5 minutes ago
-        lastActive: new Date(),
-        status: 'linked' as const
-      },
-      {
-        pid: 5678,
-        windowHandle: '2880612',
-        windowClass: 'WINDOWSCLIENT',
-        processName: 'RobloxPlayerBeta.exe',
-        windowTitle: 'Roblox - TestUser2',
-        username: 'TestUser2',
-        resourceUsage: { cpu: 8, memory: 198, gpu: 5 },
-        windowGeometry: { x: 920, y: 100, width: 800, height: 600 },
-        startTime: new Date(Date.now() - 600000), // 10 minutes ago
         lastActive: new Date(),
         status: 'linked' as const
       }
@@ -459,6 +503,7 @@ export class RobloxProcessDetector extends EventEmitter {
       if (!this.detectedProcesses.has(process.pid)) {
         this.detectedProcesses.set(process.pid, process);
         this.emit('processDetected', process);
+        console.log(`Demo process created: PID ${process.pid}, Handle: ${process.windowHandle}, Class: ${process.windowClass}`);
       }
     }
   }

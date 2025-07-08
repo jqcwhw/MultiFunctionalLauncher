@@ -1,0 +1,13 @@
+Features
+
+Manage Up to 20 Roblox Accounts: 
+The automation can simultaneously operate up to 20 accounts, directing them to farm in the last zone or hatch eggs.
+
+Setup Instructions
+To set up the Manager automation, follow these steps:
+
+Open All Roblox Accounts: Before running the automation, ensure that every Roblox account you want to use is open and ready.
+Enable AutoFarm: For accounts with the AutoFarm feature, make sure it is turned on for automated farming.
+Add Flags and Potions: Configure the accounts by adding the flags and potions you want to use.
+Keep Cameras Stationary: Avoid moving the camera on any account to prevent disrupting the automation’s functionality.
+Ensure Smooth Performance: Make sure Roblox is running smoothly with a frame rate of 50 FPS or higher on all accounts to avoid lag-related issues.

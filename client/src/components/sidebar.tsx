@@ -18,6 +18,7 @@ const navigation = [
   { name: "UWP Instances", href: "/uwp-instances", icon: Shield },
   { name: "Process Detection", href: "/roblox-processes", icon: Search },
   { name: "Enhanced System", href: "/enhanced-system", icon: Zap },
+  { name: "Proven Multi-Instance", href: "/proven-multi-instance", icon: Shield },
   { name: "Sync Manager", href: "/sync-manager", icon: Link2 },
   { name: "Accounts", href: "/accounts", icon: Users },
   { name: "Settings", href: "/settings", icon: Settings },

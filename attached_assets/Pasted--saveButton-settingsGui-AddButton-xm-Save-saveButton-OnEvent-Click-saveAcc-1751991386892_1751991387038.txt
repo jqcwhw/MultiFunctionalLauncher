@@ -1,0 +1,309 @@
+    
+    saveButton := settingsGui.AddButton("xm", "Save")
+    saveButton.OnEvent("Click", saveAccountSettings)    
+    saveAllButton := settingsGui.AddButton("yp", "Save All")
+    saveAllButton.OnEvent("Click", saveAllAccountSettings)        
+
+    populateSavedConfigsDropdown()
+
+    mainGui.GetClientPos(&mainX, &mainY, &mainW, &mainH)
+
+    accountX := mainX + mainW - 6
+    settingsGui.Show("w200 h625")
+    settingsGui.Move(accountX, 0)
+
+}
+
+; Function to handle the KeyDown event using OnMessage
+WM_KEYDOWN(wParam, lParam, msg, hwnd)
+{
+    ; Exit if the key is not the DELETE key.
+    if wParam != 0x2E
+        return
+
+    if clientList.Hwnd = hwnd {
+        selectedRow := clientList.GetNext(0, "Focused")
+        if (selectedRow > 0)
+            clientList.Delete(selectedRow)
+    }
+
+    ;if actionList.Hwnd = hwnd {
+    ;    selectedRow := actionList.GetNext(0, "Focused")
+    ;    if (selectedRow > 0)
+    ;        actionList.Delete(selectedRow)
+    ;}
+}
+
+guiKeyDown(key, info) {
+    if key != 46
+        return
+    
+    selectedRow := clientList.GetNext(0, "Focused")
+    if (selectedRow > 0)
+        clientList.Delete(selectedRow)
+}
+
+selectClient(*) {
+    if clientList.GetCount() > 0 {
+
+        displaySettingsGui()
+
+        row := clientList.GetNext(0, "Focused")
+        handle := clientList.GetText(row, 1)
+        activateWindow(handle)
+
+        selectedRow := clientList.GetNext(, "F")
+        windowId.Text := clientList.GetText(selectedRow, CLIENT_LIST_ID_COLUMN)
+        name := clientList.GetText(selectedRow, CLIENT_LIST_NAME_COLUMN)
+        accountName.Text := name
+        flagKeybind.Value := clientList.GetText(selectedRow, CLIENT_LIST_FLAG_KEYBIND_COLUMN)
+        sprinklerKeybind.Value := clientList.GetText(selectedRow, CLIENT_LIST_SPRINKLER_KEYBIND_COLUMN)
+        eventKeybind.Value := clientList.GetText(selectedRow, CLIENT_LIST_EVENT_KEYBIND_COLUMN)
+        supercomputerKeybind.Value := clientList.GetText(selectedRow, CLIENT_LIST_SUPERCOMPUTER_KEYBIND_COLUMN)
+
+        charged := clientList.GetText(selectedRow, CLIENT_LIST_CHARGED_EGGS_COLUMN)
+        chargedEggs.Value := charged != "" ? charged : 0
+
+        golden := clientList.GetText(selectedRow, CLIENT_LIST_GOLDEN_EGGS_COLUMN)
+        goldenEggs.Value := golden != "" ? golden : 0
+
+        daycare := clientList.GetText(selectedRow, CLIENT_LIST_DAYCARE_SLOTS_COLUMN)
+        daycareSlots.Value := daycare != "" ? daycare : 10
+
+        daycare := clientList.GetText(selectedRow, CLIENT_LIST_DAYCARE_USE_COLUMN)
+        daycareUse.Value := daycare != "" ? daycare : 1
+
+        hatch := clientList.GetText(selectedRow, CLIENT_LIST_HATCH_EGGS_COLUMN)
+        hatchEggs.Value := hatch != "" ? hatch : 1
+
+        if name = ""
+            openLeaderboard()
+
+    }
+}
+
+saveAllAccountSettings(*) {
+    updateClientSettings(true)
+}
+
+saveAccountSettings(*) {
+    updateClientSettings()
+}
+
+updateClientSettings(updateAll := false) {
+    settings := Map(
+        "windowId", windowId.Text,
+        "account", accountName.Text,
+        "flag", flagKeybind.Value,
+        "sprinkler", sprinklerKeybind.Value,
+        "event", eventKeybind.Value,
+        "supercomputer", supercomputerKeybind.Value,
+        "chargedEggs", chargedEggs.Value,
+        "goldenEggs", goldenEggs.Value,
+        "daycareSlots", daycareSlots.Value,
+        "daycareUse", daycareUse.Value,
+        "hatchEggs", hatchEggs.Value
+    )
+
+    Loop clientList.GetCount() {
+        clientId := clientList.GetText(A_Index, CLIENT_LIST_ID_COLUMN)
+
+        if updateAll {
+            settings["account"] := accountName.Text "_" A_Index
+            settings["windowId"] := clientId            
+            clientList.Modify(A_Index,,, 
+                settings["account"],
+                settings["flag"],
+                settings["sprinkler"],
+                settings["event"],
+                settings["supercomputer"],
+                settings["chargedEggs"],
+                settings["goldenEggs"],
+                settings["daycareSlots"],
+                settings["daycareUse"],
+                settings["hatchEggs"]
+                )
+            saveAccountSettingsToFile(settings)
+        }
+        else if clientId = settings["windowId"] {
+            clientList.Modify(A_Index,,, 
+                settings["account"],
+                settings["flag"],
+                settings["sprinkler"],
+                settings["event"],
+                settings["supercomputer"],
+                settings["chargedEggs"],
+                settings["goldenEggs"],
+                settings["daycareSlots"],
+                settings["daycareUse"],
+                settings["hatchEggs"]
+                )
+            saveAccountSettingsToFile(settings)
+            break
+        } 
+    }
+
+    settingsGui.Hide
+
+}
+
+saveAccountSettingsToFile(settings) {
+    savedConfigFilename := SAVED_CONFIG_FOLDER settings["account"] ".cfg"
+    saveConfigFile(savedConfigFilename, settings)
+
+    tempFileName := TEMP_CONFIG_FOLDER settings["windowId"] ".cfg"
+    saveConfigFile(tempFileName, settings)
+}
+
+populateSavedConfigsDropdown() {
+    fileList := []
+
+    Loop Files SAVED_CONFIG_FOLDER "\*.cfg" {
+        fileList.Push(A_LoopFileName)
+    }
+
+    savedConfigs.Delete()
+    savedConfigs.Add(fileList)
+}
+
+saveConfigFile(filename, settings) {
+    section := "Settings"
+
+    IniWrite settings["account"], filename, section, "AccountName"
+    IniWrite settings["flag"], filename, section, "FlagKeybind"
+    IniWrite settings["sprinkler"], filename, section, "SprinklerKeybind"
+    IniWrite settings["event"], filename, section, "EventKeybind"
+    IniWrite settings["supercomputer"], filename, section, "SupercomputerKeybind"
+    IniWrite settings["chargedEggs"], filename, section, "ChargedEggs"
+    IniWrite settings["goldenEggs"], filename, section, "GoldenEggs"
+    IniWrite settings["daycareSlots"], filename, section, "DaycareSlots"
+    IniWrite settings["daycareUse"], filename, section, "DaycareUse"
+    IniWrite settings["hatchEggs"], filename, section, "HatchEggs"
+    
+}
+
+loadConfigFromSaved(*) {
+    clearConfigSection()
+
+    filePath := SAVED_CONFIG_FOLDER savedConfigs.Text
+
+    ; Read the entire section into a variable.
+    sectionContent := IniRead(filePath, "Settings")
+
+    ; Split the section content into individual lines.
+    for line in StrSplit(sectionContent, "`n") {
+        ; Split each line into key and value.
+        keyValue := StrSplit(line, "=")
+        key := keyValue[1]
+        value := keyValue[2]
+        
+        ; Assign the value to the corresponding control based on the key.
+        switch key {
+            case "AccountName":
+                accountName.Text := value
+            case "FlagKeybind":
+                flagKeybind.Value := value
+            case "SprinklerKeybind":
+                sprinklerKeybind.Value := value
+            case "EventKeybind":
+                eventKeybind.Value := value                
+            case "SupercomputerKeybind":
+                supercomputerKeybind.Value := value
+            case "ChargedEggs":
+                chargedEggs.Value := value
+            case "GoldenEggs":
+                goldenEggs.Value := value
+            case "DaycareSlots":
+                daycareSlots.Value := value
+            case "DaycareUse":
+                daycareUse.Value := value                
+            case "HatchEggs":
+                hatchEggs.Value := value       
+            default:                
+        }
+    }
+}
+
+loadConfigFromTemp(windowId, listIndex) {
+
+    filePath := TEMP_CONFIG_FOLDER windowId ".cfg"
+
+    if !FileExist(filePath)
+        return
+
+    settings := Map(
+        "account", "",
+        "flag", "",
+        "sprinkler", "",
+        "event", "",
+        "supercomputer", "",
+        "chargedEggs", "",
+        "goldenEggs", "",
+        "daycareSlots", "",
+        "daycareUse", "",
+        "hatchEggs", ""
+    )
+
+    ; Read the entire section into a variable.
+    sectionContent := IniRead(filePath, "Settings")
+
+    ; Split the section content into individual lines.
+    for line in StrSplit(sectionContent, "`n") {
+        ; Split each line into key and value.
+        keyValue := StrSplit(line, "=")
+        key := keyValue[1]
+        value := keyValue[2]
+        
+        ; Assign the value to the corresponding control based on the key.
+        switch key {
+            case "AccountName":
+                settings["account"] := value
+            case "FlagKeybind":
+                settings["flag"] := value
+            case "SprinklerKeybind":
+                settings["sprinkler"] := value
+            case "EventKeybind":
+                settings["event"] := value  
+            case "SupercomputerKeybind":
+                settings["supercomputer"] := value  
+            case "ChargedEggs":
+                settings["chargedEggs"] := value
+            case "GoldenEggs":
+                settings["goldenEggs"] := value
+            case "DaycareSlots":
+                settings["daycareSlots"] := value                
+            case "DaycareUse":
+                settings["daycareUse"] := value             
+            case "HatchEggs":
+                settings["hatchEggs"] := value                            
+        }
+    }
+
+    clientList.Modify(listIndex,,, 
+        settings["account"],
+        settings["flag"],
+        settings["sprinkler"], 
+        settings["event"], 
+        settings["supercomputer"], 
+        settings["chargedEggs"],
+        settings["goldenEggs"],
+        settings["daycareSlots"],
+        settings["daycareUse"],
+        settings["hatchEggs"]
+    )
+
+    return settings["account"]
+}
+
+clearConfigSection() {
+    accountName.Text := ""
+    flagKeybind.Value := ""
+    sprinklerKeybind.Value := ""
+    eventKeybind.Value := ""
+    supercomputerKeybind.Value := ""
+    hatchEggs.Value := 1
+    chargedEggs.Value := 0
+    goldenEggs.Value := 0
+    daycareSlots.Value := 10
+    daycareUse.Value := 1
+}

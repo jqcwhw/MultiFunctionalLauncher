@@ -437,6 +437,52 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Proven Multi-Instance Routes
+  app.get("/api/roblox/proven-processes", async (req, res) => {
+    try {
+      const { provenMultiInstanceManager } = await import('./proven-multi-instance-manager');
+      const processes = provenMultiInstanceManager.getAllClients();
+      res.json(processes);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message || "Failed to get proven processes" });
+    }
+  });
+
+  app.post("/api/roblox/enable-multi-instance", async (req, res) => {
+    try {
+      const { provenMultiInstanceManager } = await import('./proven-multi-instance-manager');
+      const success = await provenMultiInstanceManager.enableMultiInstance();
+      res.json({ success, message: success ? "Multi-instance enabled" : "Failed to enable multi-instance" });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message || "Failed to enable multi-instance" });
+    }
+  });
+
+  app.post("/api/roblox/start-proven-monitoring", async (req, res) => {
+    try {
+      const { provenMultiInstanceManager } = await import('./proven-multi-instance-manager');
+      await provenMultiInstanceManager.startMonitoring();
+      res.json({ message: "Proven monitoring started" });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message || "Failed to start proven monitoring" });
+    }
+  });
+
+  app.post("/api/roblox/create-uwp-instance", async (req, res) => {
+    try {
+      const { customName } = req.body;
+      if (!customName) {
+        return res.status(400).json({ error: "Custom name is required" });
+      }
+
+      const { provenMultiInstanceManager } = await import('./proven-multi-instance-manager');
+      const success = await provenMultiInstanceManager.createUWPInstance(customName);
+      res.json({ success, message: success ? "UWP instance created" : "Failed to create UWP instance" });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message || "Failed to create UWP instance" });
+    }
+  });
+
   app.delete("/api/roblox/processes/:pid", async (req, res) => {
     try {
       const pid = parseInt(req.params.pid);

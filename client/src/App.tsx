@@ -11,6 +11,7 @@ import UWPInstances from "@/pages/uwp-instances";
 import RobloxProcesses from "@/pages/roblox-processes";
 import SyncManager from "@/pages/sync-manager";
 import EnhancedSystem from "@/pages/enhanced-system";
+import ProvenMultiInstance from "@/pages/proven-multi-instance";
 import Settings from "@/pages/settings";
 import NotFound from "@/pages/not-found";
 
@@ -27,6 +28,7 @@ function Router() {
           <Route path="/roblox-processes" component={RobloxProcesses} />
           <Route path="/sync-manager" component={SyncManager} />
           <Route path="/enhanced-system" component={EnhancedSystem} />
+          <Route path="/proven-multi-instance" component={ProvenMultiInstance} />
           <Route path="/settings" component={Settings} />
           <Route component={NotFound} />
         </Switch>
