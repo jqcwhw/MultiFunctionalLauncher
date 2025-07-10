@@ -1,0 +1,41 @@
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "0 */4 * * *"
+permissions: write-all
+
+jobs:
+  apidump:
+    name: Update API dump.
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout repo.
+      uses: actions/checkout@v2.3.4
+        
+    - name: Get latest version.
+      run: |
+        version=$(wget -qO- https://setup.rbxcdn.com/versionQTStudio)
+        echo "Latest version: $version"
+        lastversion=$(cat rbx_version.txt)
+        echo "Last version: $lastversion"
+        if [ $version != $lastversion ]
+        then
+          echo "NEW=1" >> $GITHUB_ENV
+          echo "RBX_VERSION=$version" >> $GITHUB_ENV
+          echo "$version" > rbx_version.txt
+          echo "New version!"
+        else
+          echo "NEW=0" >> $GITHUB_ENV
+          echo "No new version."
+        fi
+      
+    - name: Download latest API dump.
+      if: ${{ env.NEW == 1 }}
+      run: |
+        wget https://setup.rbxcdn.com/${RBX_VERSION}-API-Dump.json -O src/ApiDump.json
+        echo "API dump saved to 'src/ApiDump.json'."
+    
+    - name: Git auto commit.
+      if: ${{ env.NEW == 1 }}
+      uses: stefanzweifel/git-auto-commit-action@v4.16.0
+      

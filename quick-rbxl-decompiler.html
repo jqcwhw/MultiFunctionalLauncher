@@ -1,0 +1,352 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quick RBXL Decompiler</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+        
+        .container {
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        }
+        
+        h1 {
+            color: #4a5568;
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        
+        .info-box {
+            background: #ebf8ff;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            border-left: 4px solid #667eea;
+        }
+        
+        .upload-area {
+            border: 3px dashed #667eea;
+            border-radius: 10px;
+            padding: 40px;
+            text-align: center;
+            background: #f8f9ff;
+            margin-bottom: 20px;
+            transition: all 0.3s ease;
+        }
+        
+        .upload-area:hover {
+            border-color: #764ba2;
+            background: #f0f2ff;
+        }
+        
+        input[type="file"] {
+            margin: 20px 0;
+            padding: 10px;
+            border: 2px solid #e2e8f0;
+            border-radius: 8px;
+            width: 100%;
+        }
+        
+        .btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 15px 30px;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: transform 0.2s;
+            width: 100%;
+            margin: 10px 0;
+        }
+        
+        .btn:hover {
+            transform: translateY(-2px);
+        }
+        
+        .btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        .output {
+            background: #1a1a1a;
+            color: #e2e8f0;
+            padding: 20px;
+            border-radius: 10px;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            line-height: 1.4;
+            max-height: 400px;
+            overflow-y: auto;
+            margin-top: 20px;
+            white-space: pre-wrap;
+            display: none;
+        }
+        
+        .download-btn {
+            background: linear-gradient(135deg, #48bb78 0%, #38a169 100%);
+            color: white;
+            padding: 12px 24px;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            cursor: pointer;
+            margin-top: 15px;
+            display: none;
+        }
+        
+        .status {
+            padding: 15px;
+            border-radius: 8px;
+            margin: 10px 0;
+            text-align: center;
+            display: none;
+        }
+        
+        .status.success {
+            background: #c6f6d5;
+            color: #38a169;
+        }
+        
+        .status.error {
+            background: #fed7d7;
+            color: #e53e3e;
+        }
+        
+        .status.loading {
+            background: #bee3f8;
+            color: #3182ce;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔧 Quick RBXL Decompiler</h1>
+        
+        <div class="info-box">
+            <h3>Instructions:</h3>
+            <ol>
+                <li>Download your RBXL file from: <strong>https://mega.nz/file/R2cUDZDL#tGKGONkcmIcPeKf49EvX30vhFc0EC5WkVLe2uufIoeo</strong></li>
+                <li>Select the downloaded RBXL file below</li>
+                <li>Click "Decompile RBXL File" to extract readable content</li>
+                <li>Download the decompiled text file when ready</li>
+            </ol>
+        </div>
+        
+        <div class="upload-area">
+            <h3>📁 Select RBXL File</h3>
+            <input type="file" id="fileInput" accept=".rbxl" />
+        </div>
+        
+        <button class="btn" id="decompileBtn" onclick="decompileFile()" disabled>
+            🔧 Decompile RBXL File
+        </button>
+        
+        <div class="status" id="status"></div>
+        
+        <div class="output" id="output"></div>
+        
+        <button class="download-btn" id="downloadBtn" onclick="downloadFile()">
+            📥 Download Decompiled Text File
+        </button>
+    </div>
+
+    <script>
+        let decompiledContent = '';
+        let fileName = '';
+        
+        document.getElementById('fileInput').addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            const btn = document.getElementById('decompileBtn');
+            
+            if (file && file.name.toLowerCase().endsWith('.rbxl')) {
+                btn.disabled = false;
+                fileName = file.name.replace('.rbxl', '');
+                showStatus('File selected: ' + file.name, 'success');
+            } else {
+                btn.disabled = true;
+                if (file) {
+                    showStatus('Please select a valid RBXL file', 'error');
+                }
+            }
+        });
+        
+        async function decompileFile() {
+            const fileInput = document.getElementById('fileInput');
+            const file = fileInput.files[0];
+            
+            if (!file) {
+                showStatus('Please select a file first', 'error');
+                return;
+            }
+            
+            showStatus('Decompiling RBXL file...', 'loading');
+            
+            try {
+                // Read file as binary
+                const buffer = await file.arrayBuffer();
+                const content = decompileRBXL(buffer);
+                
+                decompiledContent = content;
+                document.getElementById('output').style.display = 'block';
+                document.getElementById('output').textContent = content;
+                document.getElementById('downloadBtn').style.display = 'inline-block';
+                
+                showStatus('Decompilation completed successfully!', 'success');
+                
+            } catch (error) {
+                showStatus('Decompilation failed: ' + error.message, 'error');
+            }
+        }
+        
+        function decompileRBXL(buffer) {
+            try {
+                let structuredContent = 'RBXL File Analysis\\n';
+                structuredContent += '===================\\n\\n';
+                
+                // Extract readable strings
+                const bytes = new Uint8Array(buffer);
+                let currentString = '';
+                let allStrings = [];
+                
+                for (let i = 0; i < bytes.length; i++) {
+                    const byte = bytes[i];
+                    
+                    // Check if byte is printable ASCII or common extended characters
+                    if ((byte >= 32 && byte <= 126) || byte === 9 || byte === 10 || byte === 13) {
+                        if (byte === 9) currentString += '\\t';
+                        else if (byte === 10) currentString += '\\n';
+                        else if (byte === 13) currentString += '\\r';
+                        else currentString += String.fromCharCode(byte);
+                    } else {
+                        if (currentString.length > 2) {
+                            allStrings.push(currentString.trim());
+                        }
+                        currentString = '';
+                    }
+                }
+                
+                // Add final string if exists
+                if (currentString.length > 2) {
+                    allStrings.push(currentString.trim());
+                }
+                
+                // Filter and categorize strings
+                let luaCode = '';
+                let objectNames = '';
+                let propertyValues = '';
+                let otherStrings = '';
+                
+                const luaKeywords = [
+                    'local', 'function', 'end', 'if', 'then', 'else', 'elseif', 'for', 'while', 'do', 'repeat', 'until',
+                    'script', 'game', 'workspace', 'Instance', 'new', 'FindFirstChild', 'FindFirstChildOfClass',
+                    'GetChildren', 'GetDescendants', 'Connect', 'Touched', 'Changed', 'Humanoid', 'Character',
+                    'Player', 'Players', 'ReplicatedStorage', 'StarterPlayer', 'StarterPack', 'StarterGui',
+                    'Lighting', 'SoundService', 'TweenService', 'RunService', 'UserInputService',
+                    'wait', 'spawn', 'delay', 'print', 'warn', 'error', 'pairs', 'ipairs', 'next',
+                    'require', 'module', 'return', 'break', 'continue', 'and', 'or', 'not', 'true', 'false', 'nil'
+                ];
+                
+                const robloxObjects = [
+                    'Part', 'Model', 'Script', 'LocalScript', 'ModuleScript', 'RemoteEvent', 'RemoteFunction',
+                    'NumberValue', 'StringValue', 'BoolValue', 'ObjectValue', 'IntValue', 'Vector3Value',
+                    'CFrameValue', 'RayValue', 'BrickColorValue', 'Color3Value', 'Folder', 'Configuration',
+                    'ScreenGui', 'Frame', 'TextLabel', 'TextButton', 'ImageLabel', 'ImageButton', 'ScrollingFrame',
+                    'CanvasGroup', 'UICorner', 'UIStroke', 'UIGradient', 'UIPadding', 'UIListLayout', 'UIGridLayout',
+                    'Humanoid', 'BodyVelocity', 'BodyPosition', 'BodyAngularVelocity', 'Attachment', 'WeldConstraint',
+                    'HingeConstraint', 'BallSocketConstraint', 'Motor6D', 'Weld', 'Motor', 'Snap', 'Glue', 'ManualWeld'
+                ];
+                
+                allStrings.forEach(str => {
+                    if (str.length === 0) return;
+                    
+                    // Check for Lua code patterns
+                    const hasLuaKeywords = luaKeywords.some(keyword => 
+                        str.toLowerCase().includes(keyword.toLowerCase())
+                    );
+                    
+                    const hasCodePatterns = /[={}()\\[\\];,.]/.test(str) && str.length > 5;
+                    
+                    if (hasLuaKeywords || hasCodePatterns) {
+                        luaCode += str + '\\n';
+                    }
+                    // Check for Roblox object names
+                    else if (robloxObjects.some(obj => str.includes(obj))) {
+                        objectNames += str + '\\n';
+                    }
+                    // Check for property-like strings
+                    else if (str.includes('=') || /^[A-Z][a-zA-Z0-9]*$/.test(str)) {
+                        propertyValues += str + '\\n';
+                    }
+                    // Other readable strings
+                    else if (str.length > 1 && /[a-zA-Z]/.test(str)) {
+                        otherStrings += str + '\\n';
+                    }
+                });
+                
+                // Build structured output
+                if (luaCode.trim()) {
+                    structuredContent += 'Extracted Lua Code:\\n';
+                    structuredContent += '==================\\n';
+                    structuredContent += luaCode + '\\n\\n';
+                }
+                
+                if (objectNames.trim()) {
+                    structuredContent += 'Roblox Objects Found:\\n';
+                    structuredContent += '====================\\n';
+                    structuredContent += objectNames + '\\n\\n';
+                }
+                
+                if (propertyValues.trim()) {
+                    structuredContent += 'Properties and Values:\\n';
+                    structuredContent += '=====================\\n';
+                    structuredContent += propertyValues + '\\n\\n';
+                }
+                
+                if (otherStrings.trim()) {
+                    structuredContent += 'Other Readable Strings:\\n';
+                    structuredContent += '======================\\n';
+                    structuredContent += otherStrings;
+                }
+                
+                return structuredContent;
+                
+            } catch (error) {
+                throw new Error('Failed to parse RBXL file: ' + error.message);
+            }
+        }
+        
+        function downloadFile() {
+            const blob = new Blob([decompiledContent.replace(/\\\\n/g, '\\n')], { type: 'text/plain' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = fileName + '_decompiled.txt';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }
+        
+        function showStatus(message, type) {
+            const status = document.getElementById('status');
+            status.textContent = message;
+            status.className = 'status ' + type;
+            status.style.display = 'block';
+        }
+    </script>
+</body>
+</html>
