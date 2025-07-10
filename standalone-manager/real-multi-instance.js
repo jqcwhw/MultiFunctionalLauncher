@@ -6,7 +6,7 @@ const { promisify } = require('util');
 const execAsync = promisify(exec);
 
 /**
- * Roblox Multi-Instance Manager - Real Implementation
+ * Enhanced Roblox Multi-Instance Manager - Real Implementation
  * Based on comprehensive research of 19+ multi-instance projects
  * 
  * Key techniques implemented:
@@ -14,6 +14,10 @@ const execAsync = promisify(exec);
  * 2. UWP package cloning (UWP_MultiPlatform method)
  * 3. Registry modification (Windows-specific)
  * 4. Direct process spawning with isolation
+ * 5. FPS monitoring and unlocking (ClientSettingsPatcher method)
+ * 6. RAM monitoring and management (RAMDecrypt inspired)
+ * 7. Performance statistics tracking (PerformanceStatsManager)
+ * 8. Process lifecycle monitoring (RobloxProcess method)
  */
 class RealMultiInstanceManager {
   constructor() {
@@ -23,12 +27,23 @@ class RealMultiInstanceManager {
     this.robloxPath = null;
     this.robloxVersionPath = null;
     this.uwpPath = null;
+    this.performanceMonitor = null;
+    this.fpsSettings = {
+      unlockFPS: true,
+      maxFPS: 240,
+      monitorInterval: 1000
+    };
+    this.ramSettings = {
+      maxRAMPerInstance: 4096, // MB
+      monitorInterval: 2000,
+      autoCleanup: true
+    };
     
     this.init();
   }
 
   async init() {
-    console.log('🚀 Initializing Real Multi-Instance Manager');
+    console.log('🚀 Initializing Enhanced Multi-Instance Manager');
     
     // Step 1: Detect Roblox installations
     await this.detectRobloxPaths();
@@ -44,7 +59,20 @@ class RealMultiInstanceManager {
       await this.prepareUWPCloning();
     }
     
-    console.log('✅ Multi-Instance Manager initialized');
+    // Step 4: Setup FPS unlocking and monitoring
+    await this.setupFPSManagement();
+    
+    // Step 5: Initialize performance monitoring
+    await this.initializePerformanceMonitoring();
+    
+    // Step 6: Setup RAM monitoring
+    await this.setupRAMMonitoring();
+    
+    console.log('✅ Enhanced Multi-Instance Manager initialized');
+    console.log(`   📊 FPS Monitoring: ${this.fpsSettings.unlockFPS ? 'Enabled' : 'Disabled'}`);
+    console.log(`   🎯 Max FPS: ${this.fpsSettings.maxFPS}`);
+    console.log(`   💾 RAM Monitoring: ${this.ramSettings.autoCleanup ? 'Enabled' : 'Disabled'}`);
+    console.log(`   🔧 Max RAM per instance: ${this.ramSettings.maxRAMPerInstance}MB`);
   }
 
   async detectRobloxPaths() {
