@@ -1,0 +1,114 @@
+{
+  "pets": [
+    {
+      "name": "Huge VR Robot",
+      "rarity": "PetRarity.HUGE",
+      "variant": "PetVariant.RAINBOW",
+      "base_power": 79216.37054201178,
+      "base_strength": 4346.37381823079,
+      "exclusive_level": 5,
+      "has_hidden_item": true,
+      "can_bypass": true,
+      "is_gargantuan": false,
+      "is_premium": true,
+      "enchant_level": 10,
+      "zone_bonuses": {}
+    },
+    {
+      "name": "Titanic Sun",
+      "rarity": "PetRarity.TITANIC",
+      "variant": "PetVariant.NORMAL",
+      "base_power": 45790.62214841575,
+      "base_strength": 6251.361227365553,
+      "exclusive_level": 0,
+      "has_hidden_item": true,
+      "can_bypass": false,
+      "is_gargantuan": false,
+      "is_premium": true,
+      "enchant_level": 0,
+      "zone_bonuses": {}
+    },
+    {
+      "name": "Regular Cat",
+      "rarity": "PetRarity.RARE",
+      "variant": "PetVariant.NORMAL",
+      "base_power": 15238.890853681009,
+      "base_strength": 1653.7360952419272,
+      "exclusive_level": 0,
+      "has_hidden_item": true,
+      "can_bypass": false,
+      "is_gargantuan": false,
+      "is_premium": true,
+      "enchant_level": 0,
+      "zone_bonuses": {}
+    },
+    {
+      "name": "Bunny",
+      "rarity": "PetRarity.NORMAL",
+      "variant": "PetVariant.NORMAL",
+      "base_power": 1223.7891203895838,
+      "base_strength": 123.59398602685235,
+      "exclusive_level": 0,
+      "has_hidden_item": false,
+      "can_bypass": false,
+      "is_gargantuan": false,
+      "is_premium": false,
+      "enchant_level": 0,
+      "zone_bonuses": {}
+    },
+    {
+      "name": "Gym Scorpion",
+      "rarity": "PetRarity.GARGANTUAN",
+      "variant": "PetVariant.GOLDEN",
+      "base_power": 50000,
+      "base_strength": 10000,
+      "exclusive_level": 3,
+      "has_hidden_item": true,
+      "can_bypass": true,
+      "is_gargantuan": true,
+      "is_premium": false,
+      "enchant_level": 5,
+      "zone_bonuses": {
+        "gym": 1.0
+      }
+    },
+    {
+      "name": "Guaranteed Stronger Pet",
+      "rarity": "PetRarity.HUGE",
+      "variant": "PetVariant.RAINBOW",
+      "base_power": 779786147.5229286,
+      "base_strength": 77978614752.29286,
+      "exclusive_level": 5,
+      "has_hidden_item": true,
+      "can_bypass": true,
+      "is_gargantuan": false,
+      "is_premium": true,
+      "enchant_level": 10,
+      "zone_bonuses": {
+        "special": 0.5
+      }
+    }
+  ],
+  "player_stats": {
+    "rebirths": 0,
+    "zone_level": 1,
+    "gym_coins": 0,
+    "vip_status": false,
+    "show_pet_strength": true
+  },
+  "enhancement_log": [
+    "[10:41:41] Enabled showPetStrength=true display",
+    "[10:41:41] Enhanced Huge VR Robot to GOLDEN (+100x multiplier)",
+    "[10:41:41] Enhanced Huge VR Robot to RAINBOW (+1000x multiplier)",
+    "[10:41:41] Increased Huge VR Robot exclusive level to 1 (+24755115794.38 power)",
+    "[10:41:41] Increased Huge VR Robot exclusive level to 2 (+24755115794.38 power)",
+    "[10:41:41] Increased Huge VR Robot exclusive level to 3 (+24755115794.38 power)",
+    "[10:41:41] Increased Huge VR Robot exclusive level to 4 (+24755115794.38 power)",
+    "[10:41:41] Increased Huge VR Robot exclusive level to 5 (+24755115794.38 power)",
+    "[10:41:41] Enabled bypass ability for Huge VR Robot (+86642905280.33 power)",
+    "[10:41:41] Enchanted Huge VR Robot to level 10 (+259928715840.98 power)",
+    "[10:41:41] Obtained Gym Scorpion during event: 337500000000.00 power",
+    "[10:41:41] Generated guaranteed stronger pet: 7676019889678828.00 power"
+  ],
+  "simulation_time": "2025-07-11T10:41:41.086492"
+}
