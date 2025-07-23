@@ -1,4 +1,5 @@
 import { pgTable, text, serial, integer, boolean, timestamp } from "drizzle-orm/pg-core";
+import { relations } from "drizzle-orm";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -38,6 +39,26 @@ export const settings = pgTable("settings", {
   value: text("value").notNull(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
+
+// Relations
+export const accountsRelations = relations(accounts, ({ many }) => ({
+  instances: many(instances),
+}));
+
+export const instancesRelations = relations(instances, ({ one, many }) => ({
+  account: one(accounts, {
+    fields: [instances.accountId],
+    references: [accounts.id],
+  }),
+  activityLogs: many(activityLogs),
+}));
+
+export const activityLogsRelations = relations(activityLogs, ({ one }) => ({
+  instance: one(instances, {
+    fields: [activityLogs.instanceId],
+    references: [instances.id],
+  }),
+}));
 
 // Insert schemas
 export const insertAccountSchema = createInsertSchema(accounts).omit({

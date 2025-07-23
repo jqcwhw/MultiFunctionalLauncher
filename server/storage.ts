@@ -14,6 +14,8 @@ import {
   type InstanceWithAccount,
   type AccountWithInstances
 } from "@shared/schema";
+import { db } from "./db";
+import { eq, desc, and } from "drizzle-orm";
 
 export interface IStorage {
   // Account operations
@@ -47,64 +49,72 @@ export interface IStorage {
   deleteSetting(key: string): Promise<boolean>;
 }
 
-export class MemStorage implements IStorage {
-  private accounts: Map<number, Account> = new Map();
-  private instances: Map<number, Instance> = new Map();
-  private activityLogs: Map<number, ActivityLog> = new Map();
-  private settings: Map<string, Settings> = new Map();
-  
-  private currentAccountId = 1;
-  private currentInstanceId = 1;
-  private currentLogId = 1;
-  private currentSettingsId = 1;
-
+export class DatabaseStorage implements IStorage {
   constructor() {
-    // Initialize with some default settings
-    this.setSetting({ key: "roblox_path", value: "" });
-    this.setSetting({ key: "max_instances", value: "5" });
-    this.setSetting({ key: "auto_restart", value: "true" });
+    // Initialize default settings if they don't exist
+    this.initializeDefaultSettings();
+  }
+
+  private async initializeDefaultSettings() {
+    try {
+      const existingSettings = await db.select().from(settings);
+      const settingsMap = new Map(existingSettings.map(s => [s.key, s]));
+      
+      const defaults = [
+        { key: "roblox_path", value: "" },
+        { key: "max_instances", value: "5" },
+        { key: "auto_restart", value: "true" }
+      ];
+
+      for (const defaultSetting of defaults) {
+        if (!settingsMap.has(defaultSetting.key)) {
+          await db.insert(settings).values(defaultSetting).execute();
+        }
+      }
+    } catch (error) {
+      console.warn("Could not initialize default settings:", error);
+    }
   }
 
   // Account operations
   async getAccounts(): Promise<Account[]> {
-    return Array.from(this.accounts.values());
+    return await db.select().from(accounts);
   }
 
   async getAccount(id: number): Promise<Account | undefined> {
-    return this.accounts.get(id);
+    const [account] = await db.select().from(accounts).where(eq(accounts.id, id));
+    return account || undefined;
   }
 
   async getAccountByUsername(username: string): Promise<Account | undefined> {
-    return Array.from(this.accounts.values()).find(account => account.username === username);
+    const [account] = await db.select().from(accounts).where(eq(accounts.username, username));
+    return account || undefined;
   }
 
   async createAccount(insertAccount: InsertAccount): Promise<Account> {
-    const account: Account = {
-      ...insertAccount,
-      id: this.currentAccountId++,
-      createdAt: new Date(),
-      roblosecurityToken: insertAccount.roblosecurityToken ?? null,
-      isActive: insertAccount.isActive ?? true,
-    };
-    this.accounts.set(account.id, account);
+    const [account] = await db
+      .insert(accounts)
+      .values(insertAccount)
+      .returning();
     return account;
   }
 
   async updateAccount(id: number, updates: Partial<InsertAccount>): Promise<Account | undefined> {
-    const account = this.accounts.get(id);
-    if (!account) return undefined;
-
-    const updatedAccount: Account = { ...account, ...updates };
-    this.accounts.set(id, updatedAccount);
-    return updatedAccount;
+    const [account] = await db
+      .update(accounts)
+      .set(updates)
+      .where(eq(accounts.id, id))
+      .returning();
+    return account || undefined;
   }
 
   async deleteAccount(id: number): Promise<boolean> {
-    return this.accounts.delete(id);
+    const result = await db.delete(accounts).where(eq(accounts.id, id));
+    return (result.rowCount ?? 0) > 0;
   }
 
   async getAccountWithInstances(id: number): Promise<AccountWithInstances | undefined> {
-    const account = this.accounts.get(id);
+    const account = await this.getAccount(id);
     if (!account) return undefined;
 
     const accountInstances = await this.getInstancesByAccount(id);
@@ -113,121 +123,126 @@ export class MemStorage implements IStorage {
 
   // Instance operations
   async getInstances(): Promise<Instance[]> {
-    return Array.from(this.instances.values());
+    return await db.select().from(instances);
   }
 
   async getInstance(id: number): Promise<Instance | undefined> {
-    return this.instances.get(id);
+    const [instance] = await db.select().from(instances).where(eq(instances.id, id));
+    return instance || undefined;
   }
 
   async getInstancesWithAccounts(): Promise<InstanceWithAccount[]> {
-    const instances = Array.from(this.instances.values());
-    return instances.map(instance => ({
-      ...instance,
-      account: instance.accountId ? this.accounts.get(instance.accountId) || null : null
+    const result = await db
+      .select()
+      .from(instances)
+      .leftJoin(accounts, eq(instances.accountId, accounts.id));
+    
+    return result.map(row => ({
+      ...row.instances,
+      account: row.accounts || null
     }));
   }
 
   async createInstance(insertInstance: InsertInstance): Promise<Instance> {
-    const instance: Instance = {
-      ...insertInstance,
-      id: this.currentInstanceId++,
-      createdAt: new Date(),
-      lastStarted: null,
-      status: insertInstance.status ?? 'stopped',
-      accountId: insertInstance.accountId ?? null,
-      processId: insertInstance.processId ?? null,
-      port: insertInstance.port ?? null,
-      gameId: insertInstance.gameId ?? null,
-      config: insertInstance.config ?? null,
-    };
-    this.instances.set(instance.id, instance);
+    const [instance] = await db
+      .insert(instances)
+      .values(insertInstance)
+      .returning();
     return instance;
   }
 
   async updateInstance(id: number, updates: Partial<InsertInstance>): Promise<Instance | undefined> {
-    const instance = this.instances.get(id);
-    if (!instance) return undefined;
-
-    const updatedInstance: Instance = { ...instance, ...updates };
-    this.instances.set(id, updatedInstance);
-    return updatedInstance;
+    const [instance] = await db
+      .update(instances)
+      .set(updates)
+      .where(eq(instances.id, id))
+      .returning();
+    return instance || undefined;
   }
 
   async deleteInstance(id: number): Promise<boolean> {
-    return this.instances.delete(id);
+    const result = await db.delete(instances).where(eq(instances.id, id));
+    return (result.rowCount ?? 0) > 0;
   }
 
   async getInstancesByAccount(accountId: number): Promise<Instance[]> {
-    return Array.from(this.instances.values()).filter(instance => instance.accountId === accountId);
+    return await db.select().from(instances).where(eq(instances.accountId, accountId));
   }
 
   async getInstancesByStatus(status: string): Promise<Instance[]> {
-    return Array.from(this.instances.values()).filter(instance => instance.status === status);
+    return await db.select().from(instances).where(eq(instances.status, status));
   }
 
   // Activity log operations
   async getActivityLogs(instanceId?: number, limit = 100): Promise<ActivityLog[]> {
-    let logs = Array.from(this.activityLogs.values());
-    
     if (instanceId !== undefined) {
-      logs = logs.filter(log => log.instanceId === instanceId);
+      return await db
+        .select()
+        .from(activityLogs)
+        .where(eq(activityLogs.instanceId, instanceId))
+        .orderBy(desc(activityLogs.timestamp))
+        .limit(limit);
+    } else {
+      return await db
+        .select()
+        .from(activityLogs)
+        .orderBy(desc(activityLogs.timestamp))
+        .limit(limit);
     }
-    
-    return logs
-      .sort((a, b) => b.timestamp!.getTime() - a.timestamp!.getTime())
-      .slice(0, limit);
   }
 
   async createActivityLog(insertLog: InsertActivityLog): Promise<ActivityLog> {
-    const log: ActivityLog = {
-      ...insertLog,
-      id: this.currentLogId++,
-      timestamp: new Date(),
-      instanceId: insertLog.instanceId ?? null,
-    };
-    this.activityLogs.set(log.id, log);
+    const [log] = await db
+      .insert(activityLogs)
+      .values(insertLog)
+      .returning();
     return log;
   }
 
   async clearActivityLogs(instanceId?: number): Promise<boolean> {
+    let result;
     if (instanceId !== undefined) {
-      const logsToDelete = Array.from(this.activityLogs.entries())
-        .filter(([_, log]) => log.instanceId === instanceId)
-        .map(([id, _]) => id);
-      
-      logsToDelete.forEach(id => this.activityLogs.delete(id));
-      return true;
+      result = await db.delete(activityLogs).where(eq(activityLogs.instanceId, instanceId));
     } else {
-      this.activityLogs.clear();
-      return true;
+      result = await db.delete(activityLogs);
     }
+    return (result.rowCount ?? 0) >= 0;
   }
 
   // Settings operations
   async getSettings(): Promise<Settings[]> {
-    return Array.from(this.settings.values());
+    return await db.select().from(settings);
   }
 
   async getSetting(key: string): Promise<Settings | undefined> {
-    return this.settings.get(key);
+    const [setting] = await db.select().from(settings).where(eq(settings.key, key));
+    return setting || undefined;
   }
 
   async setSetting(insertSetting: InsertSettings): Promise<Settings> {
-    const existing = this.settings.get(insertSetting.key);
-    const setting: Settings = {
-      id: existing?.id || this.currentSettingsId++,
-      key: insertSetting.key,
-      value: insertSetting.value,
-      updatedAt: new Date(),
-    };
-    this.settings.set(setting.key, setting);
-    return setting;
+    // Try to update existing setting first
+    const [updated] = await db
+      .update(settings)
+      .set({ value: insertSetting.value, updatedAt: new Date() })
+      .where(eq(settings.key, insertSetting.key))
+      .returning();
+    
+    if (updated) {
+      return updated;
+    }
+    
+    // If no existing setting, insert new one
+    const [created] = await db
+      .insert(settings)
+      .values(insertSetting)
+      .returning();
+    return created;
   }
 
   async deleteSetting(key: string): Promise<boolean> {
-    return this.settings.delete(key);
+    const result = await db.delete(settings).where(eq(settings.key, key));
+    return (result.rowCount ?? 0) > 0;
   }
 }
 
-export const storage = new MemStorage();
+export const storage = new DatabaseStorage();
