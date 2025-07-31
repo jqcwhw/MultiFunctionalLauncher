@@ -14,7 +14,12 @@ import {
   Star,
   Database,
   Play,
-  Server
+  Server,
+  Timer,
+  MousePointer,
+  Cpu,
+  DollarSign,
+  Layout
 } from "lucide-react";
 
 const navigation = [
@@ -45,6 +50,16 @@ const navigation = [
       { name: "Data Scraper", href: "/ps99-data-scraper", icon: Database },
       { name: "Action Recorder", href: "/ps99-action-recorder", icon: Play },
       { name: "API Collector", href: "/ps99-api-collector", icon: Server },
+    ]
+  },
+  {
+    section: "PS99 Enhancement Tools",
+    items: [
+      { name: "Enhancement Overview", href: "/ps99-enhancement-overview", icon: Layout },
+      { name: "Boost Scheduler", href: "/ps99-boost-scheduler", icon: Timer },
+      { name: "Macro Manager", href: "/ps99-macro-manager", icon: MousePointer },
+      { name: "Performance Optimizer", href: "/ps99-performance-optimizer", icon: Cpu },
+      { name: "Value Tracker", href: "/ps99-value-tracker", icon: DollarSign },
     ]
   },
 ];

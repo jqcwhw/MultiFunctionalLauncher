@@ -8,6 +8,11 @@ import {
   ps99ActionRecordings,
   ps99CoordinateRecordings,
   ps99ApiData,
+  ps99BoostScheduler,
+  ps99MacroScripts,
+  ps99PerformanceSettings,
+  ps99ValueTracker,
+  ps99DoubleHatchSettings,
   type Account, 
   type InsertAccount,
   type Instance,
@@ -27,7 +32,17 @@ import {
   type Ps99CoordinateRecording,
   type InsertPs99CoordinateRecording,
   type Ps99ApiData,
-  type InsertPs99ApiData
+  type InsertPs99ApiData,
+  type Ps99BoostScheduler,
+  type InsertPs99BoostScheduler,
+  type Ps99MacroScript,
+  type InsertPs99MacroScript,
+  type Ps99PerformanceSettings,
+  type InsertPs99PerformanceSettings,
+  type Ps99ValueTracker,
+  type InsertPs99ValueTracker,
+  type Ps99DoubleHatchSettings,
+  type InsertPs99DoubleHatchSettings
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, and } from "drizzle-orm";

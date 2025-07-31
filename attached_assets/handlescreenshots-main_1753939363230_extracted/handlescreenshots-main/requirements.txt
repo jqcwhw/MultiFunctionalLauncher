@@ -1,0 +1,3 @@
+appshwnd
+numpy
+pywin32

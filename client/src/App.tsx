@@ -17,6 +17,11 @@ import Ps99PetSimulator from "@/pages/ps99-pet-simulator";
 import Ps99DataScraper from "@/pages/ps99-data-scraper";
 import Ps99ActionRecorder from "@/pages/ps99-action-recorder";
 import Ps99ApiCollector from "@/pages/ps99-api-collector";
+import Ps99BoostScheduler from "@/pages/ps99-boost-scheduler";
+import Ps99MacroManager from "@/pages/ps99-macro-manager";
+import Ps99PerformanceOptimizer from "@/pages/ps99-performance-optimizer";
+import Ps99ValueTracker from "@/pages/ps99-value-tracker";
+import Ps99EnhancementOverview from "@/pages/ps99-enhancement-overview";
 import Settings from "@/pages/settings";
 import NotFound from "@/pages/not-found";
 
@@ -39,6 +44,11 @@ function Router() {
           <Route path="/ps99-data-scraper" component={Ps99DataScraper} />
           <Route path="/ps99-action-recorder" component={Ps99ActionRecorder} />
           <Route path="/ps99-api-collector" component={Ps99ApiCollector} />
+          <Route path="/ps99-boost-scheduler" component={Ps99BoostScheduler} />
+          <Route path="/ps99-macro-manager" component={Ps99MacroManager} />
+          <Route path="/ps99-performance-optimizer" component={Ps99PerformanceOptimizer} />
+          <Route path="/ps99-value-tracker" component={Ps99ValueTracker} />
+          <Route path="/ps99-enhancement-overview" component={Ps99EnhancementOverview} />
           <Route path="/settings" component={Settings} />
           <Route component={NotFound} />
         </Switch>
