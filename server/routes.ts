@@ -1,7 +1,17 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { insertAccountSchema, insertInstanceSchema, insertActivityLogSchema, insertSettingsSchema } from "@shared/schema";
+import { 
+  insertAccountSchema, 
+  insertInstanceSchema, 
+  insertActivityLogSchema, 
+  insertSettingsSchema,
+  insertPs99PetSchema,
+  insertPs99ScrapedDataSchema,
+  insertPs99ActionRecordingSchema,
+  insertPs99CoordinateRecordingSchema,
+  insertPs99ApiDataSchema
+} from "@shared/schema";
 import { z } from "zod";
 import { UWPInstanceManager } from "./uwp-instance-manager";
 import { AccountSyncManager } from "./account-sync-manager";
@@ -732,6 +742,117 @@ export async function registerRoutes(app: Express): Promise<Server> {
         error: 'Failed to launch enhanced process',
         details: error instanceof Error ? error.message : 'Unknown error'
       });
+    }
+  });
+
+  // PS99 Pet Simulator Routes
+  app.get("/api/ps99/pets", async (req, res) => {
+    try {
+      const pets = await storage.getPs99Pets();
+      res.json(pets);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch PS99 pets" });
+    }
+  });
+
+  app.post("/api/ps99/pets", async (req, res) => {
+    try {
+      const petData = insertPs99PetSchema.parse(req.body);
+      const pet = await storage.createPs99Pet(petData);
+      res.status(201).json(pet);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: "Invalid pet data", details: error.errors });
+      }
+      res.status(500).json({ error: "Failed to create pet" });
+    }
+  });
+
+  app.post("/api/ps99/pets/:id/hatch", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const hatchedPet = await storage.hatchPs99Pet(id);
+      if (!hatchedPet) {
+        return res.status(404).json({ error: "Pet not found" });
+      }
+      res.json(hatchedPet);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to hatch pet" });
+    }
+  });
+
+  // PS99 Data Scraper Routes
+  app.get("/api/ps99/scraped-data", async (req, res) => {
+    try {
+      const { type } = req.query;
+      if (type && typeof type === 'string') {
+        const data = await storage.getPs99ScrapedDataByType(type);
+        res.json(data);
+      } else {
+        const data = await storage.getPs99ScrapedData();
+        res.json(data);
+      }
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch scraped data" });
+    }
+  });
+
+  app.post("/api/ps99/scraped-data", async (req, res) => {
+    try {
+      const scrapedData = insertPs99ScrapedDataSchema.parse(req.body);
+      const data = await storage.createPs99ScrapedData(scrapedData);
+      res.status(201).json(data);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: "Invalid scraped data", details: error.errors });
+      }
+      res.status(500).json({ error: "Failed to save scraped data" });
+    }
+  });
+
+  // PS99 Action Recording Routes  
+  app.get("/api/ps99/action-recordings", async (req, res) => {
+    try {
+      const recordings = await storage.getPs99ActionRecordings();
+      res.json(recordings);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch action recordings" });
+    }
+  });
+
+  app.post("/api/ps99/action-recordings", async (req, res) => {
+    try {
+      const recordingData = insertPs99ActionRecordingSchema.parse(req.body);
+      const recording = await storage.createPs99ActionRecording(recordingData);
+      res.status(201).json(recording);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: "Invalid recording data", details: error.errors });
+      }
+      res.status(500).json({ error: "Failed to save action recording" });
+    }
+  });
+
+  // PS99 API Data Routes
+  app.get("/api/ps99/api-data", async (req, res) => {
+    try {
+      const apiData = await storage.getPs99ApiData();
+      res.json(apiData);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch API data" });
+    }
+  });
+
+  app.post("/api/ps99/api-data", async (req, res) => {
+    try {
+      const apiData = insertPs99ApiDataSchema.parse(req.body);
+      const data = await storage.createOrUpdatePs99ApiData(apiData);
+      res.status(201).json(data);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: "Invalid API data", details: error.errors });
+      }
+      res.status(500).json({ error: "Failed to save API data" });
     }
   });
 

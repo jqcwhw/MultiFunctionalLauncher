@@ -13,6 +13,10 @@ import SyncManager from "@/pages/sync-manager";
 import EnhancedSystem from "@/pages/enhanced-system";
 import ProvenMultiInstance from "@/pages/proven-multi-instance";
 import RealLauncher from "@/pages/real-launcher";
+import Ps99PetSimulator from "@/pages/ps99-pet-simulator";
+import Ps99DataScraper from "@/pages/ps99-data-scraper";
+import Ps99ActionRecorder from "@/pages/ps99-action-recorder";
+import Ps99ApiCollector from "@/pages/ps99-api-collector";
 import Settings from "@/pages/settings";
 import NotFound from "@/pages/not-found";
 
@@ -31,6 +35,10 @@ function Router() {
           <Route path="/enhanced-system" component={EnhancedSystem} />
           <Route path="/proven-multi-instance" component={ProvenMultiInstance} />
           <Route path="/real-launcher" component={RealLauncher} />
+          <Route path="/ps99-pet-simulator" component={Ps99PetSimulator} />
+          <Route path="/ps99-data-scraper" component={Ps99DataScraper} />
+          <Route path="/ps99-action-recorder" component={Ps99ActionRecorder} />
+          <Route path="/ps99-api-collector" component={Ps99ApiCollector} />
           <Route path="/settings" component={Settings} />
           <Route component={NotFound} />
         </Switch>
