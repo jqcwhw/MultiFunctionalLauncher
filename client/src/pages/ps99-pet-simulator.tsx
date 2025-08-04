@@ -30,10 +30,54 @@ export default function Ps99PetSimulator() {
     queryKey: ["/api/ps99/pets"],
   });
 
+  // Real Pet Simulator 99 API integration with Big Games API
   const hatchPetMutation = useMutation({
-    mutationFn: (petId: number) => apiRequest(`/api/ps99/pets/${petId}/hatch`, {
-      method: "POST",
-    }),
+    mutationFn: async (petId: string) => {
+      try {
+        // Get real pet data from Big Games API
+        const petResponse = await fetch(`https://biggamesapi.io/api/collection/pets`);
+        const petData = await petResponse.json();
+
+        const pet = pets.find(p => p.id === petId);
+        if (!pet) throw new Error('Pet not found');
+
+        // Use real pet stats from API if available
+        const apiPet = petData.data?.[pet.name];
+        const realMinDamage = apiPet?.stats?.damage?.min || pet.minimumDamage;
+        const realMaxDamage = apiPet?.stats?.damage?.max || pet.maximumDamage;
+
+        // Calculate actual hatched stats
+        const actualDamage = Math.floor(Math.random() * (realMaxDamage - realMinDamage + 1)) + realMinDamage;
+        const hatchedPet = {
+          ...pet,
+          id: `hatched-${Date.now()}`,
+          isHatched: true,
+          strength: actualDamage,
+          minimumDamage: realMinDamage,
+          maximumDamage: realMaxDamage,
+          hatchedAt: new Date().toISOString(),
+          apiData: apiPet // Store real API data
+        };
+
+        return hatchedPet;
+      } catch (error) {
+        console.error('Error hatching pet with real API:', error);
+        // Fallback to local calculation if API fails
+        const pet = pets.find(p => p.id === petId);
+        if (!pet) throw new Error('Pet not found');
+
+        const actualDamage = Math.floor(Math.random() * (pet.maximumDamage - pet.minimumDamage + 1)) + pet.minimumDamage;
+        const hatchedPet = {
+          ...pet,
+          id: `hatched-${Date.now()}`,
+          isHatched: true,
+          strength: actualDamage,
+          hatchedAt: new Date().toISOString()
+        };
+
+        return hatchedPet;
+      }
+    },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["/api/ps99/pets"] });
       toast({
@@ -100,7 +144,7 @@ export default function Ps99PetSimulator() {
             </div>
           </CardContent>
         </Card>
-        
+
         <Card>
           <CardContent className="p-4">
             <div className="flex items-center space-x-2">
@@ -148,7 +192,7 @@ export default function Ps99PetSimulator() {
           <TabsTrigger value="pets">My Pets ({hatched.length})</TabsTrigger>
           <TabsTrigger value="eggs">Available Eggs ({unhatched.length})</TabsTrigger>
         </TabsList>
-        
+
         <TabsContent value="pets" className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {hatched.map((pet) => (
@@ -169,7 +213,7 @@ export default function Ps99PetSimulator() {
                     <span className="text-sm text-muted-foreground">Strength</span>
                     <span className="font-bold text-lg">{pet.strength}</span>
                   </div>
-                  
+
                   <div className="space-y-1">
                     <div className="flex justify-between text-sm">
                       <span>Damage Range</span>
@@ -180,7 +224,7 @@ export default function Ps99PetSimulator() {
                       className="h-2"
                     />
                   </div>
-                  
+
                   {pet.hatchedAt && (
                     <div className="text-xs text-muted-foreground">
                       Hatched: {new Date(pet.hatchedAt).toLocaleDateString()}
@@ -190,7 +234,7 @@ export default function Ps99PetSimulator() {
               </Card>
             ))}
           </div>
-          
+
           {hatched.length === 0 && (
             <Card>
               <CardContent className="p-8 text-center">
@@ -227,7 +271,7 @@ export default function Ps99PetSimulator() {
                     <Gift className="h-8 w-8 mx-auto text-muted-foreground mb-2" />
                     <div className="text-sm text-muted-foreground">Ready to hatch!</div>
                   </div>
-                  
+
                   <Button 
                     onClick={() => hatchPetMutation.mutate(pet.id)}
                     disabled={hatchPetMutation.isPending}
@@ -239,7 +283,7 @@ export default function Ps99PetSimulator() {
               </Card>
             ))}
           </div>
-          
+
           {unhatched.length === 0 && (
             <Card>
               <CardContent className="p-8 text-center">
