@@ -100,13 +100,13 @@ export class EnhancedProcessManager extends EventEmitter {
    */
   private async prepareLaunchEnvironment(options: LaunchOptions): Promise<void> {
     if (process.platform !== 'win32') {
-      console.log('Non-Windows platform, creating instance config file instead of registry');
-      // Create config file for non-Windows systems
+      console.log('Non-Windows platform, creating simulated instance');
+      // Create instance configuration file
       const configDir = path.join(process.cwd(), 'instance-configs');
       if (!await fs.promises.access(configDir).then(() => true).catch(() => false)) {
         await fs.promises.mkdir(configDir, { recursive: true });
       }
-      
+
       const configFile = path.join(configDir, `${options.instanceId}.json`);
       const config = {
         instanceId: options.instanceId,
@@ -142,16 +142,16 @@ export class EnhancedProcessManager extends EventEmitter {
     // Method 1: Registry injection (most reliable)
     const registryScript = `
       $robloxPath = "HKCU:\\Software\\Roblox Corporation\\Environments\\roblox-player"
-      
+
       if (!(Test-Path $robloxPath)) {
         New-Item -Path $robloxPath -Force | Out-Null
       }
-      
+
       # Encrypt and store the token
       $encryptedToken = ConvertTo-SecureString "${token}" -AsPlainText -Force | ConvertFrom-SecureString
       Set-ItemProperty -Path $robloxPath -Name "AuthToken" -Value $encryptedToken
       Set-ItemProperty -Path $robloxPath -Name "TokenInjected" -Value "true"
-      
+
       Write-Output "Authentication token injected successfully"
     `;
 
@@ -168,12 +168,12 @@ export class EnhancedProcessManager extends EventEmitter {
         secure = $true
         httpOnly = $true
       }
-      
+
       # Store cookie data for browser injection
       $cookieJson = $cookieData | ConvertTo-Json
       $cookiePath = "$env:TEMP\\roblox_auth_cookie.json"
       $cookieJson | Out-File -FilePath $cookiePath -Encoding UTF8
-      
+
       Write-Output "Cookie prepared for browser injection"
     `;
 
@@ -191,7 +191,7 @@ export class EnhancedProcessManager extends EventEmitter {
         : 'start "roblox-player:"';
 
       const { stdout } = await execAsync(uwpCommand);
-      
+
       // Get the launched process
       const processes = await this.findRobloxProcesses();
       const newestProcess = processes.sort((a, b) => b.startTime.getTime() - a.startTime.getTime())[0];
@@ -225,24 +225,24 @@ export class EnhancedProcessManager extends EventEmitter {
     const script = `
       # Find Roblox UWP app
       $robloxApp = Get-AppxPackage -Name "*ROBLOX*" | Select-Object -First 1
-      
+
       if ($robloxApp) {
         $appId = $robloxApp.PackageFamilyName + "!ROBLOX"
-        
+
         if ("${options.gameUrl}") {
           Start-Process -FilePath "explorer.exe" -ArgumentList "${options.gameUrl}"
         } else {
           # Launch the UWP app directly
           Start-Process -FilePath $appId
         }
-        
+
         Start-Sleep -Seconds 3
-        
+
         # Get the newest Roblox process
         $robloxProcess = Get-Process -Name "RobloxPlayerBeta" -ErrorAction SilentlyContinue | 
                         Sort-Object StartTime -Descending | 
                         Select-Object -First 1
-        
+
         if ($robloxProcess) {
           Write-Output "SUCCESS:$($robloxProcess.Id)"
         } else {
@@ -254,10 +254,10 @@ export class EnhancedProcessManager extends EventEmitter {
     `;
 
     const { stdout } = await this.executePowerShellScript(script);
-    
+
     if (stdout.includes('SUCCESS:')) {
       const pid = parseInt(stdout.split(':')[1]);
-      
+
       const robloxProcess: RobloxProcess = {
         pid,
         instanceId: options.instanceId,
@@ -282,7 +282,7 @@ export class EnhancedProcessManager extends EventEmitter {
 
     const script = `
       $process = Get-Process -Id ${pid} -ErrorAction SilentlyContinue
-      
+
       if ($process) {
         # Set process priority
         $priorityMap = @{
@@ -290,9 +290,9 @@ export class EnhancedProcessManager extends EventEmitter {
           "normal" = "Normal" 
           "high" = "High"
         }
-        
+
         $process.PriorityClass = $priorityMap["${limits.priority}"]
-        
+
         # Set CPU affinity if needed (limit to specific cores)
         if (${limits.maxCpu} -lt 100) {
           $coreCount = (Get-WmiObject -Class Win32_Processor).NumberOfLogicalProcessors
@@ -300,7 +300,7 @@ export class EnhancedProcessManager extends EventEmitter {
           $affinityMask = [Math]::Pow(2, $maxCores) - 1
           $process.ProcessorAffinity = $affinityMask
         }
-        
+
         Write-Output "Resource limits applied to process ${pid}"
       }
     `;
@@ -318,7 +318,7 @@ export class EnhancedProcessManager extends EventEmitter {
       if ErrorLevel {
         Exit, 1
       }
-      
+
       WinMove, ahk_pid ${pid},, ${position.x}, ${position.y}, ${position.width}, ${position.height}
       WinActivate, ahk_pid ${pid}
     `;
@@ -331,7 +331,7 @@ export class EnhancedProcessManager extends EventEmitter {
    */
   private async executeAutoHotkeyScript(script: string): Promise<void> {
     const tempFile = path.join(process.cwd(), `temp_${Date.now()}.ahk`);
-    
+
     try {
       await fs.promises.writeFile(tempFile, script);
       await execAsync(`autohotkey.exe "${tempFile}"`);
@@ -357,11 +357,11 @@ export class EnhancedProcessManager extends EventEmitter {
         // Windows: Use tasklist command instead of wmic for better compatibility
         const { stdout } = await this.executeBatchCommand('tasklist /fi "imagename eq RobloxPlayerBeta.exe" /fo csv');
         const lines = stdout.split('\n').filter(line => line.includes('RobloxPlayerBeta.exe'));
-        
+
         return lines.map(line => {
           const parts = line.split('","').map(part => part.replace(/"/g, ''));
           const pid = parseInt(parts[1]) || 0;
-          
+
           return {
             pid,
             name: 'RobloxPlayerBeta.exe',
@@ -372,11 +372,11 @@ export class EnhancedProcessManager extends EventEmitter {
         // Unix-like systems: Use ps command
         const { stdout } = await this.executeBatchCommand('ps aux | grep -i roblox || echo "No Roblox processes found"');
         const lines = stdout.split('\n').filter(line => line.includes('roblox') && !line.includes('grep'));
-        
+
         return lines.map(line => {
           const parts = line.trim().split(/\s+/);
           const pid = parseInt(parts[1]) || 0;
-          
+
           return {
             pid,
             name: 'Roblox',
@@ -399,7 +399,7 @@ export class EnhancedProcessManager extends EventEmitter {
         const usage = await this.getProcessResourceUsage(process.pid);
         process.resourceUsage = usage;
         process.status = 'running';
-        
+
         this.emit('processUpdate', process);
       } catch (error) {
         // Process may have ended
@@ -418,19 +418,19 @@ export class EnhancedProcessManager extends EventEmitter {
     try {
       const { stdout } = await execAsync(`wmic process where "processid=${pid}" get WorkingSetSize,PageFileUsage /format:csv`);
       const lines = stdout.split('\n').filter(line => line.trim() && !line.includes('Node,'));
-      
+
       if (lines.length > 0) {
         const parts = lines[0].split(',');
         const memoryBytes = parseInt(parts[2]?.trim()) || 0;
         const pageFileBytes = parseInt(parts[1]?.trim()) || 0;
-        
+
         return {
           cpu: 0, // CPU usage requires more complex calculation
           memory: Math.round(memoryBytes / 1024 / 1024), // Convert to MB
           gpu: 0 // GPU usage requires additional tools
         };
       }
-      
+
       return { cpu: 0, memory: 0, gpu: 0 };
     } catch (error) {
       throw new Error(`Process ${pid} not found or terminated`);
@@ -449,7 +449,7 @@ export class EnhancedProcessManager extends EventEmitter {
     try {
       // Graceful shutdown first
       await execAsync(`taskkill /PID ${process.pid}`);
-      
+
       // Wait a bit then force kill if needed
       setTimeout(async () => {
         try {

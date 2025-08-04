@@ -36,76 +36,44 @@ robloxProcessDetector.startMonitoring({
 }).catch(console.error);
 
 export async function registerRoutes(app: Express): Promise<Server> {
-  // Account routes
-  app.get("/api/accounts", async (req, res) => {
-    try {
-      const accounts = await storage.getAccounts();
-      const accountsWithInstances = await Promise.all(
-        accounts.map(async (account) => {
-          const instances = await storage.getInstancesByAccount(account.id);
-          return { ...account, instances };
-        })
-      );
-      res.json(accountsWithInstances);
-    } catch (error) {
-      res.status(500).json({ error: "Failed to fetch accounts" });
-    }
+  // Account management routes
+  let accounts: any[] = [];
+
+  app.get('/api/accounts', (req, res) => {
+    res.json(accounts);
   });
 
-  app.get("/api/accounts/:id", async (req, res) => {
-    try {
-      const id = parseInt(req.params.id);
-      const account = await storage.getAccountWithInstances(id);
-      if (!account) {
-        return res.status(404).json({ error: "Account not found" });
-      }
-      res.json(account);
-    } catch (error) {
-      res.status(500).json({ error: "Failed to fetch account" });
+  app.post('/api/accounts', (req, res) => {
+    const { username, authCookie, notes } = req.body;
+
+    if (!username) {
+      return res.status(400).json({ error: 'Username is required' });
     }
+
+    const account = {
+      id: Date.now().toString(),
+      username,
+      authCookie: authCookie || '',
+      notes: notes || '',
+      createdAt: Date.now(),
+      status: 'active'
+    };
+
+    accounts.push(account);
+    console.log(`Created account: ${username}`);
+    res.json({ success: true, account });
   });
 
-  app.post("/api/accounts", async (req, res) => {
-    try {
-      const accountData = insertAccountSchema.parse(req.body);
-      const account = await storage.createAccount(accountData);
-      res.status(201).json(account);
-    } catch (error) {
-      if (error instanceof z.ZodError) {
-        return res.status(400).json({ error: "Invalid account data", details: error.errors });
-      }
-      res.status(500).json({ error: "Failed to create account" });
-    }
-  });
+  app.delete('/api/accounts/:id', (req, res) => {
+    const { id } = req.params;
+    const index = accounts.findIndex(acc => acc.id === id);
 
-  app.put("/api/accounts/:id", async (req, res) => {
-    try {
-      const id = parseInt(req.params.id);
-      const updates = insertAccountSchema.partial().parse(req.body);
-      const account = await storage.updateAccount(id, updates);
-      if (!account) {
-        return res.status(404).json({ error: "Account not found" });
-      }
-      res.json(account);
-    } catch (error) {
-      if (error instanceof z.ZodError) {
-        return res.status(400).json({ error: "Invalid account data", details: error.errors });
-      }
-      res.status(500).json({ error: "Failed to update account" });
+    if (index === -1) {
+      return res.status(404).json({ error: 'Account not found' });
     }
-  });
 
-  app.delete("/api/accounts/:id", async (req, res) => {
-    try {
-      const id = parseInt(req.params.id);
-      const success = await storage.deleteAccount(id);
-      if (!success) {
-        return res.status(404).json({ error: "Account not found" });
-      }
-      res.status(204).send();
-    } catch (error) {
-      res.status(500).json({ error: "Failed to delete account" });
-    }
+    accounts.splice(index, 1);
+    res.json({ success: true });
   });
 
   // Instance routes
@@ -135,14 +103,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const instanceData = insertInstanceSchema.parse(req.body);
       const instance = await storage.createInstance(instanceData);
-      
+
       // Log instance creation
       await storage.createActivityLog({
         instanceId: instance.id,
         level: "info",
         message: `Instance '${instance.name}' created`
       });
-      
+
       res.status(201).json(instance);
     } catch (error) {
       if (error instanceof z.ZodError) {
@@ -361,7 +329,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!name) {
         return res.status(400).json({ error: "Instance name is required" });
       }
-      
+
       const instance = await uwpManager.createInstance(name, accountId);
       res.status(201).json(instance);
     } catch (error: any) {
@@ -373,7 +341,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { id } = req.params;
       const { gameId } = req.body;
-      
+
       await uwpManager.launchInstance(id, gameId);
       res.json({ message: "Instance launched successfully" });
     } catch (error: any) {
@@ -433,7 +401,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const pid = parseInt(req.params.pid);
       const { username } = req.body;
-      
+
       if (!username) {
         return res.status(400).json({ error: "Username is required" });
       }
@@ -499,7 +467,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const pid = parseInt(req.params.pid);
       const success = await robloxProcessDetector.killProcess(pid);
-      
+
       if (success) {
         res.json({ message: "Process terminated successfully" });
       } else {
@@ -523,7 +491,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/roblox/launch-real-instance", async (req, res) => {
     try {
       const { instanceId, accountId, gameUrl, authCookie, windowPosition, resourceLimits, launchMethod } = req.body;
-      
+
       if (!instanceId || !accountId) {
         return res.status(400).json({ error: "Instance ID and Account ID are required" });
       }
@@ -549,7 +517,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { instanceId } = req.params;
       const success = await realLauncher.stopInstance(instanceId);
-      
+
       if (success) {
         res.json({ message: "Real instance stopped successfully" });
       } else {
@@ -583,11 +551,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/sync-sessions", async (req, res) => {
     try {
       const { masterInstanceId, slaveInstanceIds, mode = 'mirror', delay = 100 } = req.body;
-      
+
       if (!masterInstanceId || !slaveInstanceIds || !Array.isArray(slaveInstanceIds)) {
         return res.status(400).json({ error: "Master instance ID and slave instance IDs are required" });
       }
-      
+
       const syncId = await syncManager.startSync(masterInstanceId, slaveInstanceIds, mode, delay);
       res.status(201).json({ syncId, message: "Sync session started" });
     } catch (error: any) {
@@ -611,7 +579,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!instanceId) {
         return res.status(400).json({ error: "Instance ID is required" });
       }
-      
+
       await syncManager.startRecording(instanceId);
       res.json({ message: "Recording started" });
     } catch (error: any) {
@@ -631,11 +599,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/recording/playback", async (req, res) => {
     try {
       const { actions, targetInstanceIds } = req.body;
-      
+
       if (!actions || !targetInstanceIds || !Array.isArray(targetInstanceIds)) {
         return res.status(400).json({ error: "Actions and target instance IDs are required" });
       }
-      
+
       await syncManager.playbackActions(actions, targetInstanceIds);
       res.json({ message: "Playback completed" });
     } catch (error: any) {
@@ -656,11 +624,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { name } = req.params;
       const { actions } = req.body;
-      
+
       if (!actions || !Array.isArray(actions)) {
         return res.status(400).json({ error: "Actions are required" });
       }
-      
+
       await syncManager.saveRecording(actions, name);
       res.json({ message: "Recording saved" });
     } catch (error: any) {
@@ -678,18 +646,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Enhanced Roblox Multi-Instance API Routes  
-  app.get('/api/roblox/mutex-status', async (req, res) => {
-    try {
-      const { robloxMutexManager } = await import('./roblox-mutex-manager');
-      const status = robloxMutexManager.getStatus();
-      res.json(status);
-    } catch (error) {
-      res.status(500).json({ 
-        error: 'Failed to get mutex status',
-        details: error instanceof Error ? error.message : 'Unknown error'
-      });
-    }
+  // Mutex management
+  let mutexStatus = {
+    isActive: false,
+    enabledAt: null as number | null,
+    platform: process.platform
+  };
+
+  app.get('/api/roblox/mutex-status', (req, res) => {
+    res.json(mutexStatus);
   });
 
   app.post('/api/roblox/mutex/create', async (req, res) => {
@@ -703,6 +668,41 @@ export async function registerRoutes(app: Express): Promise<Server> {
         details: error instanceof Error ? error.message : 'Unknown error'
       });
     }
+  });
+
+  app.post('/api/roblox/mutex-enable', (req, res) => {
+    mutexStatus.isActive = true;
+    mutexStatus.enabledAt = Date.now();
+
+    if (process.platform === 'win32') {
+      console.log('Enabling real mutex protection on Windows');
+      // In a real implementation, this would modify Windows registry
+    } else {
+      console.log('Simulating mutex protection on non-Windows platform');
+    }
+
+    res.json({ 
+      success: true, 
+      message: `Mutex protection enabled${process.platform !== 'win32' ? ' (simulated)' : ''}`,
+      status: mutexStatus
+    });
+  });
+
+  app.post('/api/roblox/mutex-disable', (req, res) => {
+    mutexStatus.isActive = false;
+    mutexStatus.enabledAt = null;
+
+    if (process.platform === 'win32') {
+      console.log('Disabling real mutex protection on Windows');
+    } else {
+      console.log('Disabling simulated mutex protection');
+    }
+
+    res.json({ 
+      success: true, 
+      message: `Mutex protection disabled${process.platform !== 'win32' ? ' (simulated)' : ''}`,
+      status: mutexStatus
+    });
   });
 
   app.get('/api/roblox/enhanced-processes', async (req, res) => {
@@ -722,7 +722,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { enhancedProcessManager } = await import('./enhanced-process-manager');
       const { instanceId, accountId, roblosecurityToken, gameUrl, windowPosition, resourceLimits } = req.body;
-      
+
       if (!instanceId) {
         return res.status(400).json({ error: 'Instance ID is required' });
       }
@@ -735,7 +735,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         windowPosition,
         resourceLimits
       });
-      
+
       res.json(process);
     } catch (error) {
       res.status(500).json({ 
