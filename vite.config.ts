@@ -35,10 +35,3 @@ export default defineConfig({
     },
   },
 });
-// The current configuration appears correct, and there's no immediately obvious error.
-// However, to actively check for errors and fix them, we'd need more context.
-// Add a basic check to ensure the environment variables are defined.
-// This is a placeholder, replace with actual error checking based on what you find.
-if (!process.env.NODE_ENV) {
-  console.warn("NODE_ENV is not defined.  This may cause issues.");
-}

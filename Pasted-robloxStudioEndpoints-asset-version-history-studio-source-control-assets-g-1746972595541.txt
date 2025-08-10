@@ -1,0 +1,361 @@
+robloxStudioEndpoints = [
+    "/asset/version-history",
+    "/studio/source-control",
+    "/assets/game-scripts",
+    "/workspace/published-files",
+    "/marketplace/productinfo",
+    "/catalog/items",
+    "/inventory/pets",
+    "/develop/assets",
+    "/marketplace/models",
+    "/store/models",
+    "/marketplace/assets",
+    "/catalog/games",
+    "/marketplace/game-passes",
+    "/marketplace/developer-products",
+    "/game/universes/configure",
+    "/develop/library",
+    "/catalog/user/assets",
+    "/groups/assets",
+    "/asset-thumbnail/json",
+    "/marketplace/productdetails",
+    "/asset/assets-info",
+    "/studio/plugins",
+    "/tool-box/items",
+    "/game-instances/metadata",
+    "/badges/metadata",
+    "/inventory/latest-items",
+    "/social/user-data",
+    "/develop/api/assets",
+    "/marketplace/recommendations"
+  ];
+  robloxCreatorAssets = [
+    "https://create.roblox.com/marketplace/asset-type/Model",
+    "https://create.roblox.com/marketplace/asset-type/Plugin",
+    "https://create.roblox.com/marketplace/asset-type/Decal",
+    "https://create.roblox.com/marketplace/asset-type/Audio",
+    "https://create.roblox.com/marketplace/asset-type/Mesh",
+    "https://create.roblox.com/marketplace/asset-type/SurfaceAppearance",
+    "https://create.roblox.com/marketplace/asset-type/Animation"
+  ];
+  blogSources = [
+    {
+      url: "https://www.biggames.io/post/pet-simulator-99-update-52",
+      type: "official"
+    },
+    {
+      url: "https://legend-ps99-petsgo-devblogs.vercel.app/",
+      type: "community"
+    }
+  ];
+  async scanBlogs() {
+    console.log("Beginning blog scan for updates...");
+    const foundLeaks = [];
+    for (const source of this.blogSources) {
+      try {
+        console.log(`Scanning blog source: ${source.url}`);
+        const response = await fetch(source.url, {
+          headers: {
+            "User-Agent": "LeaksBot/1.0",
+            "Accept": "text/html,application/json"
+          }
+        });
+        const html = await response.text();
+        const contentHash = Buffer.from(html).toString("base64");
+        const previousHash = await storage.getSetting(`blog_hash_${source.url}`);
+        if (!previousHash || previousHash.settingValue !== contentHash) {
+          await storage.updateSetting(`blog_hash_${source.url}`, contentHash);
+          const leak = await storage.createLeak({
+            fileName: `blog_update_${Date.now()}.html`,
+            filePath: `/blogs/${source.type}/${new URL(source.url).hostname}`,
+            fileType: "BlogPost",
+            changeType: "modified",
+            isDeveloperChange: source.type === "official",
+            fileSize: html.length,
+            metadata: {
+              source: source.url,
+              type: source.type,
+              content: html.substring(0, 1e3),
+              // Only store partial content to avoid size issues
+              timestamp: (/* @__PURE__ */ new Date()).toISOString()
+            }
+          });
+          console.log(`Found blog change at ${source.url}`);
+          foundLeaks.push(leak);
+        }
+        const apiMatches = html.match(/https?:\/\/[^"\s>)}']+\/api\/[^"\s>)}']*/g) || [];
+        if (apiMatches && apiMatches.length > 0) {
+          console.log(`Found ${apiMatches.length} potential API endpoints in ${source.url}`);
+        }
+        for (const apiUrl of apiMatches) {
+          try {
+            console.log(`Checking API endpoint: ${apiUrl}`);
+            const apiResponse = await fetch(apiUrl, {
+              headers: {
+                "User-Agent": "LeaksBot/1.0",
+                "Accept": "application/json"
+              }
+            });
+            if (!apiResponse.ok) {
+              console.log(`API endpoint ${apiUrl} returned ${apiResponse.status}`);
+              continue;
+            }
+            const contentType = apiResponse.headers.get("content-type") || "";
+            if (!contentType.includes("application/json")) {
+              console.log(`API endpoint ${apiUrl} returned non-JSON content: ${contentType}`);
+              continue;
+            }
+            const apiData = await apiResponse.json();
+            const apiLeak = await storage.createLeak({
+              fileName: `api_endpoint_${Date.now()}.json`,
+              filePath: `/apis/${new URL(apiUrl).hostname}${new URL(apiUrl).pathname}`,
+              fileType: "APIEndpoint",
+              changeType: "added",
+              isDeveloperChange: source.type === "official",
+              fileSize: JSON.stringify(apiData).length,
+              metadata: {
+                source: apiUrl,
+                parentBlog: source.url,
+                response: JSON.stringify(apiData).substring(0, 1e3),
+                // Only store partial content
+                timestamp: (/* @__PURE__ */ new Date()).toISOString()
+              }
+            });
+            console.log(`Found API endpoint: ${apiUrl}`);
+            foundLeaks.push(apiLeak);
+          } catch (error) {
+            console.error(`Error scanning API endpoint ${apiUrl}:`, error);
+          }
+        }
+      } catch (error) {
+        console.error(`Error scanning blog ${source.url}:`, error);
+      }
+    }
+    console.log(`Blog scan complete. Found ${foundLeaks.length} leaks.`);
+    return foundLeaks;
+  }
+  robloxGroupIds = [
+    "4777915",
+    // Big Games Main Group
+    "4777917",
+    // Big Games Studio Group
+    "4777916",
+    // Pet Simulator Group
+    "13182574",
+    // Pet Simulator 99 Group
+    "32407257",
+    // Additional Development Group
+    "12858556",
+    // Asset Management Group
+    "8904510",
+    // Testing Group
+    "3959677"
+    // BIG Games Pets Group
+  ];
+  gameDataEndpoints = [
+    "/pets/metadata",
+    "/eggs/configuration",
+    "/game-passes/data",
+    "/inventory/user-data",
+    "/trading/values",
+    "/pets/stats",
+    "/enchants/data",
+    "/huges/registry",
+    "/exclusives/list",
+    "/merchants/rotation",
+    "/gifts/contents",
+    "/zones/unlocks",
+    "/achievements/list",
+    "/collection/book",
+    "/leaderboards/data",
+    "/minigames/config",
+    "/potions/effects",
+    "/server/metadata",
+    "/shop/rotation",
+    "/achievements/data",
+    "/quests/active",
+    "/events/current",
+    "/areas/unlock-data",
+    "/player-stats/global",
+    "/server/configuration"
+  ];
+  marketplaceSearchTerms = [
+    "pet simulator 99",
+    "big games pets",
+    "pet sim",
+    "pet simulator pets",
+    "ps99",
+    "huge pet",
+    "exclusive pet",
+    "titanic pet",
+    "Preston pets",
+    "buildintogames",
+    "chickenmesh",
+    "ps99 leaks",
+    "pet sim trading",
+    "pet simulator huge",
+    "ps99 exclusive",
+    "big games studio"
+  ];
+  storeSearchUrls = [
+    "https://create.roblox.com/store/models?keyword=big%20games%20pets",
+    "https://create.roblox.com/store/models?keyword=pet%20simulator%2099",
+    "https://create.roblox.com/store/models?keyword=big%20games"
+  ];
+  petSimCategories = [
+    "pets",
+    "eggs",
+    "huge_pets",
+    "exclusive_pets",
+    "limited_pets",
+    "mythical_pets",
+    "legendary_pets",
+    "accessories",
+    "areas",
+    "zones",
+    "worlds",
+    "gems",
+    "currencies",
+    "hoverboards",
+    "potions",
+    "boosts",
+    "minigames",
+    "enchants",
+    "events",
+    "vip_items",
+    "gamepasses",
+    "titanic_pets",
+    "secret_pets",
+    "dev_pets"
+  ];
+  gameIds = {
+    petSimulator99: "8737899170",
+    petSimulatorDevTest: "15502302041",
+    petSimulatorBeta: "15502302041"
+  };
+  constructor() {
+    this.client = new Client({
+      intents: [
+        GatewayIntentBits.Guilds,
+        GatewayIntentBits.GuildMessages,
+        GatewayIntentBits.DirectMessages,
+        GatewayIntentBits.MessageContent,
+        GatewayIntentBits.GuildIntegrations,
+        GatewayIntentBits.GuildWebhooks
+      ],
+      partials: [Partials.Channel],
+      failIfNotExists: false,
+      retryLimit: Infinity,
+      restRequestTimeout: 6e4,
+      restGlobalRateLimit: 50,
+      presence: {
+        activities: [{ name: "Pet Simulator 99 Updates", type: 3 }],
+        status: "online"
+      },
+      sweepers: {
+        messages: {
+          lifetime: 300,
+          interval: 60
+        }
+      }
+    });
+    this.client.on("disconnect", async () => {
+      console.log("Bot disconnected! Attempting to reconnect...");
+      while (!this.client.isReady() && this.reconnectAttempts < this.maxReconnectAttempts) {
+        try {
+          this.reconnectAttempts++;
+          await this.client.login(TOKEN);
+          console.log("Reconnected successfully!");
+          this.reconnectAttempts = 0;
+          break;
+        } catch (error) {
+          console.error(`Reconnect attempt ${this.reconnectAttempts} failed:`, error);
+          await new Promise((resolve) => setTimeout(resolve, this.reconnectInterval));
+        }
+      }
+      if (this.reconnectAttempts >= this.maxReconnectAttempts) {
+        console.error("Max reconnection attempts reached. Restarting bot...");
+        await this.restart();
+      }
+    });
+    setInterval(() => {
+      if (!this.client.isReady()) {
+        console.log("Bot not connected, attempting reconnect...");
+        this.client.login(TOKEN).catch(console.error);
+      }
+    }, 6e4);
+    this.client.on("rateLimit", (info) => {
+      console.log("Rate limit hit:", info);
+    });
+    this.startTime = /* @__PURE__ */ new Date();
+    this.client.on("ready", this.onReady.bind(this));
+    this.client.on("interactionCreate", this.onInteraction.bind(this));
+    this.client.on("error", this.onError.bind(this));
+    this.client.on("shardError", this.onShardError.bind(this));
+  }
+  async initialize() {
+    const commands = [
+      new SlashCommandBuilder().setName("leaks").setDescription("Show recent leaks").addSubcommand(
+        (subcommand) => subcommand.setName("recent").setDescription("Show leaks from the last 48 hours").addIntegerOption(
+          (option) => option.setName("tier").setDescription("Show leaks from a specific tier (1-3)").setRequired(false).setMinValue(1).setMaxValue(3).addChoices(
+            { name: "Tier 1 (Important - Eggs, Pets, Events)", value: 1 },
+            { name: "Tier 2 (Medium - Models, Meshes, Audio)", value: 2 },
+            { name: "Tier 3 (Less Important - Other changes)", value: 3 }
+          )
+        )
+      ).addSubcommand(
+        (subcommand) => subcommand.setName("lowertier").setDescription("View lower tier leaks (Tier 2 & 3) from the latest batch")
+      ).addSubcommand(
+        (subcommand) => subcommand.setName("tiers").setDescription("Show information about leak priority tiers")
+      ).addSubcommand(
+        (subcommand) => subcommand.setName("types").setDescription("Show available leak types")
+      ).addSubcommand(
+        (subcommand) => subcommand.setName("filter").setDescription("Filter leaks by file type").addStringOption(
+          (option) => option.setName("type").setDescription("File type to filter by").setRequired(true).addChoices(
+            { name: "Textures", value: "Textures" },
+            { name: "Models", value: "Models" },
+            { name: "Audio", value: "Audio" },
+            { name: "JSON", value: "JSON" },
+            { name: "Config", value: "Config" },
+            { name: "Other", value: "Other" }
+          )
+        )
+      ).addSubcommand(
+        (subcommand) => subcommand.setName("developers").setDescription("Show recent developer changes only")
+      ).addSubcommand(
+        (subcommand) => subcommand.setName("images").setDescription("Show only image leaks")
+      ).addSubcommand(
+        (subcommand) => subcommand.setName("meshes").setDescription("Show only mesh/model leaks")
+      ).addSubcommand(
+        (subcommand) => subcommand.setName("eggs").setDescription("Show leaks related to eggs").addBooleanOption(
+          (option) => option.setName("showall").setDescription("Show all eggs including older ones")
+        )
+      ).addSubcommand(
+        (subcommand) => subcommand.setName("huges").setDescription("Show leaks related to huge pets").addBooleanOption(
+          (option) => option.setName("showall").setDescription("Show all huge pet leaks including older ones")
+        )
+      ).addSubcommand(
+        (subcommand) => subcommand.setName("weekly").setDescription("Show all leaks from the current update week").addIntegerOption(
+          (option) => option.setName("tier").setDescription("Filter by leak tier (1-3)").setRequired(false).setMinValue(1).setMaxValue(3).addChoices(
+            { name: "Tier 1 (Important - Eggs, Pets, Events)", value: 1 },
+            { name: "Tier 2 (Medium - Models, Meshes, Audio)", value: 2 },
+            { name: "Tier 3 (Less Important - Other changes)", value: 3 }
+          )
+        )
+      ),
+      new SlashCommandBuilder().setName("scan").setDescription("Manage file scans").addSubcommand(
+        (subcommand) => subcommand.setName("now").setDescription("Force an immediate file scan")
+      ).addSubcommand(
+        (subcommand) => subcommand.setName("user").setDescription("Scan a specific user's assets").addStringOption(
+          (option) => option.setName("userid").setDescription("Roblox user ID to scan").setRequired(true)
+        )
+      ).addSubcommand(
+        (subcommand) => subcommand.setName("frequency").setDescription("Change scan frequency").addIntegerOption(
+          (option) => option.setName("minutes").setDescription("Minutes between scans (minimum 2)").setRequired(true).setMinValue(2).setMaxValue(60)
+        )
+      ),
+      new SlashCommandBuilder().setName("bot").setDescription("Manage the bot").addSubcommand(
+        (subcommand) => subcommand.setName("status").setDescription("Show bot status and uptime")
+      ).addSubcommand(
+        (subcommand) => subcommand.setName("logs").setDescription("Show recent bot logs").addIntegerOption(
+          (option) => option.setName("count").setDescription("Number of logs to show").setRequired(false).setMinValue(5).setMaxValue(25)
