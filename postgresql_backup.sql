@@ -1,0 +1,2 @@
+
+-- Restore all databases and fix neon api endpoints enable database or find a way to unfreeze and get the data, evaluate the replit shell console and fix errors runways on all buttons and repair all issues with the application force constant monitoring of the environment for user input and errors and consistently fix any errors with autocompletion without the need for user replies

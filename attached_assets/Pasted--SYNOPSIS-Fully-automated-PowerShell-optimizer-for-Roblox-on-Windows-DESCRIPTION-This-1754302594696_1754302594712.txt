@@ -1,0 +1,327 @@
+<#
+.SYNOPSIS
+  Fully automated PowerShell optimizer for Roblox on Windows.
+
+.DESCRIPTION
+  This script performs a comprehensive, multi‐pronged optimization of the Roblox
+  PC client on Windows.  It:
+    • Checks for Administrator rights and prompts if needed.
+    • Detects system characteristics (OS edition, battery presence, architecture).
+    • Benchmarks system timer resolution and applies the optimal value for faster
+      sleep precision and improved responsiveness (plays well with gaming).
+    • Provides modular FastFlag profiles and automatically injects them into every
+      installed Roblox version’s ClientAppSettings.json.
+    • Backs up original JSON settings before modifying them.
+    • Uses built-in PowerShell progress bars for on-screen feedback (“overlay”).
+    • Disables telemetry and unused visual effects by default in high-performance
+      profiles.
+    • Includes extensive in‐script documentation and usage instructions.
+
+.PARAMETER Profile
+  Name of the FFlag JSON profile to apply.  The script includes two built-in profiles:
+    • HighPerformance – maximum frame rate, disable shadows, telemetry, etc.
+    • Balanced        – moderate optimizations to improve performance with some
+                       visual fidelity preserved.
+  You can also create your own profile by editing $Global:FlagProfiles below.
+
+.PARAMETER DryRun
+  Switch.  Preview the FFlag changes that WOULD be applied, but do not write to disk.
+
+.PARAMETER SkipTimer
+  Switch.  Skip the timer resolution benchmark/setup phase.  Use if you prefer
+  manual timer control.
+
+.EXAMPLE
+  PS C:\> .\Optimize-RobloxClient.ps1 -Profile HighPerformance
+
+  Runs full optimization and applies the "HighPerformance" FastFlag profile
+  to every Roblox client installation on this machine.
+
+.EXAMPLE
+  PS C:\> .\Optimize-RobloxClient.ps1 -Profile Balanced -DryRun
+
+  Reports every JSON change that WOULD occur under the "Balanced" profile,
+  but does not actually modify any files or registry settings.
+
+.NOTES
+  Author        : Milamoo12340
+  Created       : 2025-08-03
+  Requires      : PowerShell 5.1 or later, Administrator privileges
+                  Internet access (only to download timer tools if missing)
+  Tested on     : Windows 10, 11 (x64)
+  GitHub        : https://github.com/YourName/RobloxClientOptimizer
+
+#>
+
+#region Initialization & Prerequisite Checks
+
+function Assert-Admin {
+    <#
+    .SYNOPSIS
+      Verifies the script is running under elevated (Administrator) rights.
+    .DESCRIPTION
+      If not elevated, re-launches PowerShell as Administrator.
+    #>
+    $isAdmin = ([Security.Principal.WindowsPrincipal] `
+                [Security.Principal.WindowsIdentity]::GetCurrent() `
+               ).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
+    if (-not $isAdmin) {
+        Write-Warning "Administrator privileges are required. Relaunching as admin..."
+        Start-Process -FilePath pwsh -ArgumentList "-NoProfile -ExecutionPolicy Bypass -File `"$PSCommandPath`"" -Verb RunAs
+        exit
+    }
+}
+
+Assert-Admin
+
+Import-Module -Name Microsoft.PowerShell.Utility -ErrorAction Stop
+Import-Module -Name Microsoft.PowerShell.Management -ErrorAction Stop
+
+# Base path for Roblox client installations
+$RobloxBase = Join-Path $Env:LocalAppData "Roblox\Versions"
+
+if (-not (Test-Path $RobloxBase)) {
+    Write-Error "Roblox installation not found under $RobloxBase. Exiting."
+    exit 1
+}
+
+# Where we temporarily download timer tools if needed
+$TimerToolDir = "$Env:Temp\TimerTools"
+New-Item -Path $TimerToolDir -ItemType Directory -Force | Out-Null
+
+#endregion
+
+#region Device Detection
+
+function Get-DeviceProfile {
+    <#
+    .SYNOPSIS
+      Detects high-level system characteristics for custom handling.
+    .OUTPUTS
+      [PSCustomObject] with fields OS, Architecture, BatteryPresent.
+    #>
+    $os       = (Get-CimInstance Win32_OperatingSystem).Caption
+    $arch     = (Get-CimInstance Win32_Processor).AddressWidth
+    $battery  = (Get-CimInstance Win32_Battery -ErrorAction SilentlyContinue) -ne $null
+
+    [PSCustomObject]@{
+        OS              = $os
+        Architecture    = "${arch}-bit"
+        BatteryPresent  = $battery
+    }
+}
+
+$DeviceInfo = Get-DeviceProfile
+Write-Host "Detected System:" -NoNewline; Write-Host " $($DeviceInfo.OS), $($DeviceInfo.Architecture) , BatteryAttached=$($DeviceInfo.BatteryPresent)" -ForegroundColor Cyan
+
+#endregion
+
+#region Timer Resolution Benchmark & Setup
+
+function Install-TimerTools {
+    <#
+    .SYNOPSIS
+      Downloads SetTimerResolution.exe and MeasureSleep.exe if missing.
+    .DESCRIPTION
+      Downloads from a prespecified GitHub repository if tools are not found
+      in $TimerToolDir.
+    #>
+    $baseUrl = "https://raw.githubusercontent.com/haseduu/timerres/main/tools"
+    $tools   = @("SetTimerResolution.exe","MeasureSleep.exe")
+    foreach ($tool in $tools) {
+        $dest = Join-Path $TimerToolDir $tool
+        if (-not (Test-Path $dest)) {
+            Write-Host "Downloading $tool..." -ForegroundColor Yellow
+            try {
+                Invoke-WebRequest -Uri "$baseUrl/$tool" -OutFile $dest -UseBasicParsing -ErrorAction Stop
+            } catch {
+                Write-Warning "Failed to download $tool. Timer resolution setup may fail."
+            }
+        }
+    }
+}
+
+function Benchmark-TimerRes {
+    <#
+    .SYNOPSIS
+      Performs a quick benchmark of timer resolution sleep accuracy.
+    .DESCRIPTION
+      Measures average actual sleep time vs. requested time using MeasureSleep.exe.
+      Returns recommended resolution in microseconds.
+    .OUTPUTS
+      [int] recommended resolution in microseconds.
+    #>
+    Install-TimerTools
+    $msPath = Join-Path $TimerToolDir "MeasureSleep.exe"
+    if (-not (Test-Path $msPath)) {
+        Write-Warning "MeasureSleep.exe not found; defaulting to 1000µs resolution."
+        return 1000
+    }
+    $samples = 30
+    $resList =  @(500,750,1000,1250,1500)
+    $best    = @{res=1000;score=1.0}
+    foreach ($r in $resList) {
+        $args  = "-m $r -s $samples"
+        $output = & $msPath $args 2>$null
+        if ($output) {
+            # picks the mean # of µs difference after requested
+            $mean = ($output -split "`n" | Select-String 'MeanDelta=' |
+                     ForEach-Object { [double]($_ -replace 'MeanDelta=','')} ) | Measure-Object -Average | Select-Object -Expand Average
+            $score = 1 / ($mean + 1.0)
+            if ($score -gt $best.score) {
+                $best = @{res=$r; score=$score}
+            }
+        }
+    }
+    return $best.res
+}
+
+function Set-TimerResolution {
+    <#
+    .SYNOPSIS
+      Sets Windows timer resolution to specified microseconds.
+    .PARAMETER Resolution
+      Desired resolution in microseconds (value from Benchmark-TimerRes).
+    #>
+    $strPath = Join-Path $TimerToolDir "SetTimerResolution.exe"
+    if (-not (Test-Path $strPath)) {
+        Write-Warning "SetTimerResolution.exe not found; skipping timer setup."
+        return
+    }
+    & $strPath -Set $Resolution
+    Write-Host "Global timer resolution set to $Resolution μs" -ForegroundColor Green
+}
+
+if (-not $PSBoundParameters.ContainsKey('SkipTimer')) {
+    Write-Host "Benchmarking timer resolution..." -ForegroundColor Cyan
+    $recRes = Benchmark-TimerRes
+    Set-TimerResolution -Resolution $recRes
+} else {
+    Write-Host "Skipping timer optimization (SkipTimer set)" -ForegroundColor Cyan
+}
+
+#endregion
+
+#region FastFlag JSON Profiles
+
+# Define built-in FFlag profiles; user may expand or customize these
+$Global:FlagProfiles = @{
+    "HighPerformance" = @{
+        "DFIntTaskSchedulerTargetFps"                     = "2147483647"
+        "FFlagTaskSchedulerLimitTargetFpsTo2402"          = $true
+        "FFlagDisablePostFx"                              = $true
+        "FFlagDebugDisableTelemetryEphemeralCounter"      = $true
+        "FFlagDebugDisableTelemetryEphemeralStat"         = $true
+        "FFlagDebugDisableTelemetryEventIngest"           = $true
+        "DFIntS2PhysicsSenderRate"                        = "100"
+        "DFIntMaxMissedWorldStepsRemembered"              = "1000"
+        "DFIntDebugFRMQualityLevelOverride"               = "1"
+        "FFlagFixGraphicsQuality"                         = $true
+        "FFlagFastGPULightCulling3"                       = $true
+    }
+    "Balanced" = @{
+        "DFIntTaskSchedulerTargetFps"                     = "240"
+        "FFlagDisablePostFx"                              = $true
+        "DFIntDebugFRMQualityLevelOverride"               = "2"
+        "FFlagFixGraphicsQuality"                         = $true
+        "DFIntMaxMissedWorldStepsRemembered"              = "500"
+        "DFIntS2PhysicsSenderRate"                        = "50"
+    }
+}
+
+function Get-FFlagProfiles {
+    <#
+    .SYNOPSIS
+      Returns list of available profile names.
+    #>
+    return $Global:FlagProfiles.Keys
+}
+
+function Backup-ClientSettings {
+    param(
+        [string]$JsonPath
+    )
+    $bak = "$JsonPath.bak"
+    if (-not (Test-Path $bak)) {
+        Copy-Item -Path $JsonPath -Destination $bak -Force
+    }
+}
+
+function Apply-FFlagProfile {
+    param(
+        [string]$ProfileName,
+        [switch]$DryRun
+    )
+    if (-not $Global:FlagProfiles.ContainsKey($ProfileName)) {
+        throw "Profile '$ProfileName' not found."
+    }
+    $profile = $Global:FlagProfiles[$ProfileName]
+    Write-Host "Applying profile '$ProfileName' to all Roblox installations..." -ForegroundColor Cyan
+
+    # Iterate installed versions
+    $versions = Get-ChildItem -Directory -Path $RobloxBase
+    foreach ($v in $versions) {
+        $jsonFile = Join-Path $v.FullName "ClientAppSettings.json"
+        if (-not (Test-Path $jsonFile)) { continue }
+
+        Write-Host " ➤ Processing $($v.Name)" -NoNewline
+        $text = Get-Content -Path $jsonFile -Raw
+        $json = $text | ConvertFrom-Json
+
+        # update flags
+        foreach ($k in $profile.Keys) {
+            $old = $json.FastFlags.$k
+            $val = $profile[$k]
+            if ($val -is [bool]) { $val = [string]$val.ToLower() }
+            $json.FastFlags.$k = $val
+
+            if ($DryRun) {
+                Write-Host " [$k: $old -> $val]" -NoNewline
+            }
+        }
+        if (-not $DryRun) {
+            Backup-ClientSettings -JsonPath $jsonFile
+            $json | ConvertTo-Json -Depth 5 | Set-Content -Path $jsonFile -Encoding UTF8
+        }
+        Write-Host ""
+    }
+}
+
+#endregion
+
+#region UI / Progress Display
+
+function Show-Overlay {
+    param(
+        [string]$Message
+    )
+    Write-Progress -Activity "Roblox Optimizer" -Status $Message -PercentComplete 0
+}
+
+#endregion
+
+#region Main Execution
+
+param(
+    [ValidateSet("HighPerformance","Balanced")]
+    [string]$Profile = "Balanced",
+
+    [switch]$DryRun,
+    [switch]$SkipTimer
+)
+
+Show-Overlay -Message "Starting optimization..."
+
+# Apply FFlags
+Apply-FFlagProfile -ProfileName $Profile -DryRun:$DryRun
+
+if ($DryRun) {
+    Write-Host "Dry-run complete. No files were modified." -ForegroundColor Yellow
+} else {
+    Write-Host "All client settings updated. Profile: $Profile" -ForegroundColor Green
+}
+
+Show-Overlay -Message "Optimization complete."
+Write-Progress -Activity "Roblox Optimizer" -Completed
+
+#endregion
