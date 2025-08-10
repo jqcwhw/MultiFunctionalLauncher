@@ -2,7 +2,11 @@
 
 ## Overview
 
-This is a full-stack web application designed to manage multiple Roblox accounts and instances. The application provides a comprehensive dashboard for monitoring and controlling Roblox game instances, with features for account management, instance lifecycle control, activity logging, and system monitoring.
+This is a full-stack web application designed to manage multiple Roblox accounts and instances. It provides a comprehensive dashboard for monitoring and controlling Roblox game instances, offering features for account management, instance lifecycle control, activity logging, and system monitoring. The project leverages proven techniques for multi-instance functionality, including UWP package cloning and mutex bypass methods, aiming to provide a robust and anti-detection capable solution for managing multiple Roblox game instances. It also integrates enhancements for performance monitoring, automation, and tracking of the PS99 developer ecosystem.
+
+## User Preferences
+
+Preferred communication style: Simple, everyday language.
 
 ## System Architecture
 
@@ -10,218 +14,46 @@ This is a full-stack web application designed to manage multiple Roblox accounts
 - **Frontend**: React 18 with TypeScript
 - **Backend**: Node.js with Express
 - **Database**: PostgreSQL with Drizzle ORM
-- **UI Framework**: Radix UI components with Tailwind CSS
+- **UI Framework**: Radix UI components with Tailwind CSS (using shadcn/ui design system)
 - **State Management**: TanStack Query for server state
-- **Build Tool**: Vite for development and production builds
-- **Database Provider**: Neon Database (serverless PostgreSQL)
+- **Build Tool**: Vite
 
 ### Architecture Pattern
-The application follows a monorepo structure with a clear separation between client and server code:
-- **Client**: React SPA with component-based architecture
-- **Server**: RESTful API with Express middleware
-- **Shared**: Common schemas and types shared between client and server
-- **Database**: PostgreSQL with Drizzle ORM for type-safe database operations
+The application utilizes a monorepo structure separating client and server code, with shared schemas and types. It follows a RESTful API design for the backend and a component-based architecture for the frontend. Core architectural decisions include:
+- **Multi-Instance Core**: Implements UWP package cloning, AppxManifest.xml modification, and ROBLOX_singletonMutex/Event bypass for robust multi-instance support.
+- **Process Management**: Enhanced process manager for advanced Roblox process control, including mutex management and registry modification integration.
+- **Performance Optimization**: Includes FPS unlocking via `DFIntTaskSchedulerTargetFps` and intelligent RAM management with automatic cleanup.
+- **Automation & Enhancement**: Integrates macro management, boost scheduling, and FastFlags optimization for PS99 (Pet Simulator 99) enhancements.
+- **Developer Ecosystem Tracking**: Features a system for tracking PS99 developers, community groups, assets, and network connections.
+- **Cross-platform Compatibility**: Designed to adapt to non-Windows environments, with full functionality on Windows and demo modes for Mac/Linux where applicable.
+- **Deployment**: Supports both portable versions and an Electron desktop application for flexible distribution.
+- **UI/UX**: Modern web dashboard with real-time monitoring, resource tracking, quick launch buttons, performance cards, and advanced form controls. Uses Tailwind CSS for styling and Lucide React for icons.
 
-## Key Components
-
-### Frontend Architecture
-- **Component Structure**: Modular components using shadcn/ui design system
-- **Routing**: Wouter for lightweight client-side routing
-- **Forms**: React Hook Form with Zod validation
-- **Styling**: Tailwind CSS with CSS custom properties for theming
-- **Icons**: Lucide React for consistent iconography
-
-### Backend Architecture
-- **API Design**: RESTful endpoints for CRUD operations
-- **Middleware**: Express middleware for request logging and error handling
-- **Storage**: Abstracted storage interface with in-memory implementation
-- **Development**: Vite integration for hot module replacement in development
-
-### Database Schema
-The application uses four main entities:
-- **Accounts**: User account information with optional Roblosecurity tokens
-- **Instances**: Game instance configurations linked to accounts
-- **Activity Logs**: System and instance-level logging
-- **Settings**: Application configuration key-value pairs
-
-## Data Flow
-
-1. **Client Requests**: React components make API calls using TanStack Query
-2. **Server Processing**: Express routes handle business logic and data validation
-3. **Database Operations**: Drizzle ORM manages PostgreSQL interactions
-4. **Response Handling**: Structured JSON responses with error handling
-5. **State Management**: TanStack Query manages caching and synchronization
+### Key Features
+- Account and Instance Management
+- Activity Logging
+- System Monitoring (CPU, memory, GPU, FPS)
+- Anti-detection measures
+- PS99 Boost Scheduler and Macro Manager
+- PS99 Performance Optimizer and Value Tracker
+- PS99 Developer Ecosystem and Community Tracking
 
 ## External Dependencies
 
 ### Core Framework Dependencies
-- **@neondatabase/serverless**: Serverless PostgreSQL connection
-- **drizzle-orm**: Type-safe database toolkit
-- **@tanstack/react-query**: Server state management
-- **react-hook-form**: Form state management
-- **wouter**: Lightweight routing
+- `@neondatabase/serverless` (for serverless PostgreSQL)
+- `drizzle-orm`
+- `@tanstack/react-query`
+- `react-hook-form`
+- `wouter`
 
 ### UI Dependencies
-- **@radix-ui/***: Accessible component primitives
-- **tailwindcss**: Utility-first CSS framework
-- **lucide-react**: Icon library
-- **class-variance-authority**: Conditional styling utility
+- `@radix-ui/*`
+- `tailwindcss`
+- `lucide-react`
+- `class-variance-authority`
 
 ### Development Dependencies
-- **vite**: Build tool and development server
-- **typescript**: Type checking
-- **tsx**: TypeScript execution for Node.js
-
-## Deployment Strategy
-
-### Development Environment
-- **Local Development**: Vite dev server with HMR
-- **Database**: Neon Database with connection pooling
-- **Build Process**: Vite builds client, esbuild bundles server
-- **Environment**: NODE_ENV-based configuration
-
-### Production Deployment
-- **Client Build**: Static assets generated by Vite
-- **Server Build**: Bundled Node.js application with esbuild
-- **Database**: PostgreSQL with Drizzle migrations
-- **Process Management**: Single Node.js process serving both API and static files
-
-### Environment Configuration
-- **DATABASE_URL**: PostgreSQL connection string
-- **NODE_ENV**: Environment flag for development/production
-- **PORT**: Server port configuration
-
-## User Preferences
-
-Preferred communication style: Simple, everyday language.
-
-## Changelog
-
-### July 08, 2025 - Comprehensive Research Completed
-- **Extracted and analyzed all 19 zip files** containing Roblox tools and libraries
-- **Discovered critical UWP_MultiPlatform solution** - the exact technique for creating multiple Roblox instances
-- **Identified core implementation approach**: UWP package cloning with manifest modification
-- **Cataloged supporting tools**: Account management, automation scripts, API wrappers, and UI libraries
-- **Created comprehensive analysis document** with implementation roadmap
-- **Found proven multi-instance technique** that works with current Roblox UWP applications
-
-### Key Discovery: UWP Multi-Instance Implementation
-The UWP_MultiPlatform project provides the complete solution:
-1. Clone ROBLOX UWP package directory structure
-2. Modify AppxManifest.xml for unique package identity
-3. Remove package signature to allow modifications
-4. Register new package using PowerShell Add-AppxPackage
-5. Launch instances via shell protocol
-
-### Next Implementation Phase
-Ready to implement the core UWP multi-instance engine based on proven C# techniques, translated to Node.js architecture with web dashboard integration.
-
-### July 08, 2025 - Enhanced Multi-Instance System Implementation
-- **Integrated official Roblox GitHub repository patterns** from their open-source libraries (Roact, Rodux, Jest-Roblox)
-- **Created comprehensive Enhanced Process Manager** with advanced Roblox process management
-- **Enhanced UWP Instance Manager** with mutex management and registry modification integration  
-- **Added Enhanced System dashboard page** with real-time monitoring and protection status
-- **Implemented official Roblox coding patterns** for better compatibility and reliability
-- **Created advanced API routes** for mutex management, registry control, and enhanced process monitoring
-- **Platform-aware initialization** that skips Windows-specific features on non-Windows systems
-- **Real-time process monitoring** with CPU, memory, and GPU usage tracking
-- **Anti-detection measures** using official Roblox singleton mutex bypass techniques
-
-### Technical Enhancements Applied
-- **Roblox Mutex Manager**: PowerShell-based ROBLOX_singletonMutex bypass with batch fallback
-- **Registry Manager**: Windows registry modifications for multi-client isolation  
-- **Enhanced Process Manager**: Advanced process launching with authentication injection
-- **Resource Management**: CPU/memory limits and window positioning control
-- **Cross-platform Compatibility**: Detects and adapts to non-Windows environments
-- **Portable Build System**: Standalone version that runs without separate server
-- **Electron Desktop App**: Native desktop application with embedded server
-- **Anti-detection Methods**: Comprehensive analysis and implementation of 11 evasion techniques
-
-### July 08, 2025 - Portable & Desktop Versions Created
-- **Created portable launcher system** that works without requiring separate server installation
-- **Fixed PowerShell compatibility issues** with batch file fallbacks for better Windows compatibility
-- **Built comprehensive anti-detection documentation** analyzing all 19+ extracted Roblox projects
-- **Implemented 5 primary detection evasion methods** with 85% success rate
-- **Created both Electron desktop app and portable versions** for maximum distribution flexibility
-- **Enhanced cross-platform support** with proper Windows vs non-Windows detection
-- **Documented 6 additional advanced methods** ready for implementation (95% success rate potential)
-
-### July 08, 2025 - Release Packages Created
-- **Packaged portable version** as easy-to-distribute zip file with launchers for all platforms
-- **Created development package** with complete source code and build instructions
-- **Wrote comprehensive setup instructions** with troubleshooting guides for all platforms
-- **Documented complete implementation details** including all 19+ analyzed projects and techniques
-- **Created release notes** detailing features, anti-detection methods, and success rates
-- **Ready for distribution** - both packages complete with all documentation and easy setup
-
-### January 08, 2025 - Standalone Desktop Application Completed
-- **Built real multi-instance engine** using proven techniques from MultiBloxy, MultiRoblox, and UWP research
-- **Created standalone server application** with Node.js backend and modern web interface
-- **Implemented ROBLOX_singletonEvent mutex bypass** - the core technique for multi-instance support
-- **Added cross-platform support** with Windows full functionality and Mac/Linux demo mode
-- **Created comprehensive launch methods** - direct execution, protocol handler, UWP shell, PowerShell
-- **Built modern web dashboard** with real-time monitoring, resource tracking, and quick launch buttons
-- **Packaged complete release versions** - portable and development packages ready for distribution
-- **Documented entire implementation** with setup instructions, troubleshooting, and technical details
-- **Successfully demonstrated working multi-instance functionality** based on research of 19+ projects
-
-### January 08, 2025 - Enhanced Performance Monitoring System Completed
-- **Comprehensive analysis of 19+ zip folders completed** - extracted and analyzed all Roblox tools, libraries, and utilities
-- **Discovered critical FPS monitoring techniques** from FPSPingGraph.lua and ClientSettingsPatcher.cs
-- **Implemented advanced FPS unlocking** using DFIntTaskSchedulerTargetFps modification (up to 1000 FPS)
-- **Added intelligent RAM management** with automatic cleanup and per-instance limits (512MB-16GB)
-- **Created real-time performance dashboard** with FPS monitoring, RAM usage tracking, and system statistics
-- **Enhanced multi-instance engine** with performance optimization, memory management, and resource monitoring
-- **Integrated proven techniques** from Account Manager, RAMDecrypt, and Core-Scripts performance monitoring
-- **Added comprehensive API endpoints** for performance control, settings management, and instance optimization
-- **Built modern enhanced UI** with performance cards, progress bars, toggle switches, and real-time updates
-- **Successfully demonstrated enhanced system** with FPS monitoring, RAM optimization, and automatic performance tuning
-
-### January 31, 2025 - PS99 Enhancement Suite Implementation Completed
-- **Analyzed and integrated 19+ additional automation tools** including BoostMacro_Slymi, MiniMacro, FastFlags-Collective, and RoValra
-- **Created comprehensive PS99 Boost Scheduler** with 7-slot automation system inspired by BoostMacro_Slymi AutoHotkey script
-- **Implemented advanced Macro Manager** using MiniMacro Python recording format with mouse/keyboard capture
-- **Built Performance Optimizer** with FastFlags-Collective library and Roblox graphics optimization profiles
-- **Developed Value Tracker** based on RoValra browser extension for real-time PS99 item pricing and market trends
-- **Enhanced database schema** with 5 new tables for boost scheduling, macro management, performance settings, value tracking, and double hatch automation
-- **Created modern enhancement overview dashboard** showcasing all integrated tools and their capabilities
-- **Added comprehensive UI components** including sliders, textareas, and advanced form controls
-- **Updated navigation** with dedicated PS99 Enhancement Tools section in sidebar
-
-### February 01, 2025 - PS99 Developer Ecosystem Tracking Implemented
-- **Comprehensive developer tracking system** with complete PS99 ecosystem monitoring capabilities
-- **Developer profiles database** tracking all 15+ identified PS99 developers from BigGames team and collaborators
-- **Community management system** for tracking official groups (BIG Games Pets, Staff, Experimental, Super Fun)
-- **Testing environment monitoring** for dev versions, experimental features, and private testing places
-- **Asset tracking capabilities** for monitoring studio creations, marketplace items, and developer inventories
-- **Network analysis system** for mapping developer connections, friendships, and collaborations
-- **Quick-add functionality** with pre-populated data for all discovered PS99 developers and communities
-- **Real-time tracking dashboard** with comprehensive statistics and monitoring capabilities
-
-### Technical Enhancements Applied (February 01, 2025)
-- **Developer Database Schema**: 6 new PostgreSQL tables for comprehensive ecosystem tracking
-- **PS99 Developer Profiles**: Complete tracking of BigGames staff and PS99 development team
-- **Community Management**: Official group tracking with member counts and verification status
-- **Asset Monitoring**: Track private testing places, studio creations, and marketplace content
-- **Inventory Tracking**: Monitor developer inventories, limited items, and RAP values
-- **Connection Mapping**: Network analysis of developer relationships and collaborations
-- **Modern Dashboard UI**: Advanced React components with real-time updates and search functionality
-- **Quick-Add Integration**: Pre-populated data for immediate tracking of discovered developers
-
-### Technical Enhancements Applied (January 31, 2025)
-- **BoostMacro Integration**: 7-slot boost timing automation with customizable intervals and AutoHotkey compatibility
-- **MiniMacro System**: Python-based macro recording with MOVP, LCLP, KEYP, HOLLUP command support  
-- **FastFlags Optimization**: Comprehensive Roblox performance flag library with FPS unlocking up to 1000 FPS
-- **RoValra Value Tracking**: Real-time market data collection with regional pricing and trend analysis
-- **Double Hatch Automation**: Coordinate-based egg hatching with color detection and speed control
-- **Enhanced Database Schema**: 5 new PostgreSQL tables with proper relations and TypeScript type safety
-- **Modern React UI**: Advanced component library with form validation, real-time updates, and responsive design
-- **Cross-platform Compatibility**: Enhanced detection and graceful handling of non-Windows environments
-
-### Technical Enhancements Applied (January 08, 2025)
-- **FPS Management System**: ClientAppSettings.json modification with DFIntTaskSchedulerTargetFps control
-- **RAM Monitoring Engine**: Real-time memory tracking with PowerShell integration and optimization
-- **Performance Statistics**: Live CPU, memory, and FPS monitoring for all instances
-- **Automatic Optimization**: Smart memory cleanup when system resources exceed 85% usage
-- **Enhanced Dashboard**: Real-time performance cards, progress indicators, and settings management
-- **Cross-platform Compatibility**: Enhanced detection and graceful handling of non-Windows environments
+- `vite`
+- `typescript`
+- `tsx`
