@@ -25,19 +25,8 @@ export async function setupVite(app: Express, server: Server) {
     allowedHosts: true as const,
   };
 
-  // Dynamically import vite config to avoid build issues
-  let viteConfig;
-  try {
-    const configModule = await import("../vite.config.js");
-    viteConfig = configModule.default;
-  } catch (error) {
-    console.warn("Could not load vite config, using defaults");
-    viteConfig = {};
-  }
-
   const vite = await createViteServer({
-    ...viteConfig,
-    configFile: false,
+    configFile: path.resolve(import.meta.dirname, "..", "vite.config.ts"),
     customLogger: {
       ...viteLogger,
       error: (msg, options) => {
