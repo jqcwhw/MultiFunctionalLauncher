@@ -24,6 +24,7 @@ import Ps99ValueTracker from "@/pages/ps99-value-tracker";
 import Ps99EnhancementOverview from "@/pages/ps99-enhancement-overview";
 import Ps99DeveloperTracking from "@/pages/ps99-developer-tracking";
 import Settings from "@/pages/settings";
+import LiveGameplay from "@/pages/live-gameplay";
 import NotFound from "@/pages/not-found";
 
 function Router() {
@@ -52,6 +53,7 @@ function Router() {
           <Route path="/ps99-enhancement-overview" component={Ps99EnhancementOverview} />
           <Route path="/ps99-developer-tracking" component={Ps99DeveloperTracking} />
           <Route path="/settings" component={Settings} />
+          <Route path="/live-gameplay" component={LiveGameplay} />
           <Route component={NotFound} />
         </Switch>
       </main>

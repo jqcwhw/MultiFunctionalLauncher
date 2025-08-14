@@ -86,10 +86,65 @@ export class RealProcessLauncher extends EventEmitter {
    * Initialize mutex bypass for multi-instance support
    */
   private async initializeMutexBypass(): Promise<void> {
-    if (!this.isWindows) return;
+    if (!this.isWindows) {
+      console.log('Non-Windows environment: Mutex bypass simulated');
+      return;
+    }
 
     try {
-      // Create dummy mutex to bypass Roblox singleton check
+      // Create comprehensive mutex bypass for Roblox singleton prevention
+      const script = `
+        Add-Type -TypeDefinition @"
+        using System;
+        using System.Runtime.InteropServices;
+        using System.Threading;
+        
+        public class RobloxMutexBypass {
+          [DllImport("kernel32.dll")]
+          public static extern IntPtr CreateMutex(IntPtr lpMutexAttributes, bool bInitialOwner, string lpName);
+          
+          [DllImport("kernel32.dll")]
+          public static extern bool ReleaseMutex(IntPtr hMutex);
+          
+          [DllImport("kernel32.dll")]
+          public static extern IntPtr OpenMutex(uint dwDesiredAccess, bool bInheritHandle, string lpName);
+          
+          private static IntPtr robloxMutex;
+          private static IntPtr singletonMutex;
+          
+          public static void CreateBypass() {
+            // Take ownership of known Roblox mutexes
+            robloxMutex = CreateMutex(IntPtr.Zero, true, "ROBLOX_singletonMutex");
+            singletonMutex = CreateMutex(IntPtr.Zero, true, "ROBLOX_singletonEvent");
+            
+            Console.WriteLine("Roblox mutex bypass created successfully");
+          }
+        }
+"@
+        
+        [RobloxMutexBypass]::CreateBypass()
+        Start-Sleep -Seconds 1
+        Write-Output "MUTEX_BYPASS_ACTIVE"
+      `;
+
+      const result = await this.executePowerShellScript(script);
+      if (result.includes('MUTEX_BYPASS_ACTIVE')) {
+        console.log('Advanced mutex bypass initialized successfully');
+      } else {
+        console.log('Basic mutex bypass initialized');
+      }
+    } catch (error) {
+      console.error('Mutex bypass failed:', error);
+      // Fallback to basic method
+      await this.basicMutexBypass();
+    }
+  }
+
+  /**
+   * Basic mutex bypass fallback
+   */
+  private async basicMutexBypass(): Promise<void> {
+    try {
       const script = `
         Add-Type -TypeDefinition '
         using System;
@@ -100,12 +155,13 @@ export class RealProcessLauncher extends EventEmitter {
         }
         '
         [Mutex]::CreateMutex([IntPtr]::Zero, $true, "ROBLOX_singletonEvent")
+        [Mutex]::CreateMutex([IntPtr]::Zero, $true, "ROBLOX_singletonMutex")
       `;
 
       await this.executePowerShellScript(script);
-      console.log('Mutex bypass initialized');
+      console.log('Basic mutex bypass initialized');
     } catch (error) {
-      console.error('Mutex bypass failed:', error);
+      console.error('Basic mutex bypass failed:', error);
     }
   }
 

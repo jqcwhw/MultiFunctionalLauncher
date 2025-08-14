@@ -17,6 +17,7 @@ import { UWPInstanceManager } from "./uwp-instance-manager";
 import { AccountSyncManager } from "./account-sync-manager";
 import { robloxProcessDetector } from "./roblox-process-detector";
 import { RealProcessLauncher } from "./real-process-launcher";
+import { bigGamesAPI } from "./big-games-api";
 
 // Initialize managers
 const uwpManager = new UWPInstanceManager();
@@ -385,6 +386,55 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json(processes);
     } catch (error: any) {
       res.status(500).json({ error: error.message || "Failed to get processes" });
+    }
+  });
+
+  // Big Games API Integration Routes
+  app.post("/api/biggames/start-tracking", async (req, res) => {
+    try {
+      const { usernames } = req.body;
+      if (!usernames || !Array.isArray(usernames)) {
+        return res.status(400).json({ error: "Usernames array is required" });
+      }
+      
+      await bigGamesAPI.startTracking(usernames);
+      res.json({ message: "Tracking started", usernames });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message || "Failed to start tracking" });
+    }
+  });
+
+  app.post("/api/biggames/stop-tracking", async (req, res) => {
+    try {
+      bigGamesAPI.stopTracking();
+      res.json({ message: "Tracking stopped" });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message || "Failed to stop tracking" });
+    }
+  });
+
+  app.get("/api/biggames/player-data/:username", async (req, res) => {
+    try {
+      const { username } = req.params;
+      const playerData = bigGamesAPI.getPlayerData(username);
+      
+      if (!playerData) {
+        return res.status(404).json({ error: "Player data not found" });
+      }
+      
+      res.json(playerData);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message || "Failed to get player data" });
+    }
+  });
+
+  app.get("/api/biggames/all-players", async (req, res) => {
+    try {
+      const allData = bigGamesAPI.getAllPlayerData();
+      const playersArray = Array.from(allData.values());
+      res.json(playersArray);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message || "Failed to get all player data" });
     }
   });
 
