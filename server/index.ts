@@ -62,13 +62,13 @@ app.use((req, res, next) => {
   if (app.get("env") === "development") {
     await setupVite(app, server);
   } else {
-    // Serve static files from client build
-    app.use(express.static(path.join(__dirname, '../client/dist')));
+    // Serve static files from dist/public directory
+    app.use(express.static(path.join(__dirname, '../dist/public')));
 
     // Handle client-side routing - catch all routes that don't start with /api
     app.get('*', (req, res) => {
       if (!req.path.startsWith('/api')) {
-        res.sendFile(path.join(__dirname, '../client/dist/index.html'));
+        res.sendFile(path.join(__dirname, '../dist/public/index.html'));
       } else {
         res.status(404).json({ error: 'API endpoint not found' });
       }
@@ -80,6 +80,8 @@ app.use((req, res, next) => {
   // It is the only port that is not firewalled.
   const port = 5000;
   server.listen(port, "0.0.0.0", () => {
-    log(`serving on port ${port}`);
+    log(`Server running at http://0.0.0.0:${port}`);
+    log(`API available at http://0.0.0.0:${port}/api`);
+    log(`Client served from ${app.get("env") === "development" ? "Vite dev server" : "static files"}`);
   });
 })();
