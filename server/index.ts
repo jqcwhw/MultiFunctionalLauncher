@@ -1,10 +1,19 @@
 import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
+import path from "path"; // Import path module
+import cors from "cors"; // Import cors module
 
 const app = express();
+app.use(cors()); // Added CORS middleware
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
+
+// Add debugging middleware
+app.use((req, res, next) => {
+  console.log(`${new Date().toISOString()} - ${req.method} ${req.path}`);
+  next();
+});
 
 app.use((req, res, next) => {
   const start = Date.now();
@@ -53,7 +62,17 @@ app.use((req, res, next) => {
   if (app.get("env") === "development") {
     await setupVite(app, server);
   } else {
-    serveStatic(app);
+    // Serve static files from client build
+    app.use(express.static(path.join(__dirname, '../client/dist')));
+
+    // Handle client-side routing - catch all routes that don't start with /api
+    app.get('*', (req, res) => {
+      if (!req.path.startsWith('/api')) {
+        res.sendFile(path.join(__dirname, '../client/dist/index.html'));
+      } else {
+        res.status(404).json({ error: 'API endpoint not found' });
+      }
+    });
   }
 
   // ALWAYS serve the app on port 5000
