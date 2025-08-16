@@ -25,7 +25,8 @@ import Ps99EnhancementOverview from "@/pages/ps99-enhancement-overview";
 import Ps99DeveloperTracking from "@/pages/ps99-developer-tracking";
 import Settings from "@/pages/settings";
 import LiveGameplay from "@/pages/live-gameplay";
-import NotFound from "@/pages/not-found";
+import DataManagement from "./pages/data-management";
+import NotFound from "./pages/not-found";
 
 function Router() {
   return (
@@ -54,7 +55,8 @@ function Router() {
           <Route path="/ps99-developer-tracking" component={Ps99DeveloperTracking} />
           <Route path="/settings" component={Settings} />
           <Route path="/live-gameplay" component={LiveGameplay} />
-          <Route component={NotFound} />
+          <Route path="/data-management" element={<DataManagement />} />
+          <Route path="*" element={<NotFound />} />
         </Switch>
       </main>
     </div>

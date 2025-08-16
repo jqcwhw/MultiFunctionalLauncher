@@ -396,7 +396,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!usernames || !Array.isArray(usernames)) {
         return res.status(400).json({ error: "Usernames array is required" });
       }
-      
+
       await bigGamesAPI.startTracking(usernames);
       res.json({ message: "Tracking started", usernames });
     } catch (error: any) {
@@ -417,11 +417,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { username } = req.params;
       const playerData = bigGamesAPI.getPlayerData(username);
-      
+
       if (!playerData) {
         return res.status(404).json({ error: "Player data not found" });
       }
-      
+
       res.json(playerData);
     } catch (error: any) {
       res.status(500).json({ error: error.message || "Failed to get player data" });
@@ -903,6 +903,128 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: "Invalid API data", details: error.errors });
       }
       res.status(500).json({ error: "Failed to save API data" });
+    }
+  });
+
+  // File storage routes
+  app.post("/api/files/upload", async (req, res) => {
+    try {
+      const { filename, content, contentType } = req.body;
+
+      if (!filename || !content) {
+        return res.status(400).json({ error: "Filename and content are required" });
+      }
+
+      const result = await storage.storeFile(filename, content, contentType);
+      res.json(result);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to store file" });
+    }
+  });
+
+  app.get("/api/files/:id", async (req, res) => {
+    try {
+      const file = await storage.getFile(req.params.id);
+      if (!file) {
+        return res.status(404).json({ error: "File not found" });
+      }
+
+      res.set({
+        'Content-Type': file.contentType,
+        'Content-Disposition': `attachment; filename="${file.filename}"`
+      });
+      res.send(file.content);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to retrieve file" });
+    }
+  });
+
+  app.get("/api/files", async (req, res) => {
+    try {
+      const pattern = req.query.pattern as string;
+      const files = await storage.listFiles(pattern);
+      res.json(files);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to list files" });
+    }
+  });
+
+  app.delete("/api/files/:id", async (req, res) => {
+    try {
+      const success = await storage.deleteFile(req.params.id);
+      if (!success) {
+        return res.status(404).json({ error: "File not found" });
+      }
+      res.json({ message: "File deleted successfully" });
+    } catch (error) {
+      res.status(500).json({ error: "Failed to delete file" });
+    }
+  });
+
+  // Bulk data operations
+  app.post("/api/data/bulk/:table", async (req, res) => {
+    try {
+      const { table } = req.params;
+      const { data } = req.body;
+
+      if (!Array.isArray(data)) {
+        return res.status(400).json({ error: "Data must be an array" });
+      }
+
+      const count = await storage.storeBulkData(table, data);
+      res.json({ message: `Stored ${count} records in ${table}`, count });
+    } catch (error) {
+      res.status(500).json({ error: `Failed to store bulk data: ${error}` });
+    }
+  });
+
+  app.get("/api/data/export/:table", async (req, res) => {
+    try {
+      const { table } = req.params;
+      const data = await storage.exportTableData(table);
+
+      res.set({
+        'Content-Type': 'application/json',
+        'Content-Disposition': `attachment; filename="${table}_export.json"`
+      });
+      res.json(data);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to export data" });
+    }
+  });
+
+  // Database backup and restore
+  app.get("/api/database/backup", async (req, res) => {
+    try {
+      const backup = await storage.backupDatabase();
+      const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+
+      res.set({
+        'Content-Type': 'application/json',
+        'Content-Disposition': `attachment; filename="database_backup_${timestamp}.json"`
+      });
+      res.send(backup);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to create backup" });
+    }
+  });
+
+  app.post("/api/database/restore", async (req, res) => {
+    try {
+      const { backup } = req.body;
+
+      if (!backup) {
+        return res.status(400).json({ error: "Backup data is required" });
+      }
+
+      const success = await storage.restoreDatabase(backup);
+      if (!success) {
+        return res.status(400).json({ error: "Failed to restore database" });
+      }
+
+      res.json({ message: "Database restored successfully" });
+    } catch (error) {
+      res.status(500).json({ error: "Failed to restore database" });
     }
   });
 

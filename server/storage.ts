@@ -109,6 +109,18 @@ export interface IStorage {
   getPs99ApiDataByEndpoint(endpoint: string): Promise<Ps99ApiData | undefined>;
   createOrUpdatePs99ApiData(data: InsertPs99ApiData): Promise<Ps99ApiData>;
   deletePs99ApiData(id: number): Promise<boolean>;
+
+  // File storage operations
+  storeFile(filename: string, content: Buffer | string, contentType?: string): Promise<{ id: string; path: string }>;
+  getFile(id: string): Promise<{ content: Buffer; contentType: string; filename: string } | undefined>;
+  deleteFile(id: string): Promise<boolean>;
+  listFiles(pattern?: string): Promise<Array<{ id: string; filename: string; size: number; createdAt: Date }>>;
+
+  // Bulk data operations
+  storeBulkData(tableName: string, data: any[]): Promise<number>;
+  exportTableData(tableName: string): Promise<any[]>;
+  backupDatabase(): Promise<string>;
+  restoreDatabase(backupData: string): Promise<boolean>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -328,6 +340,10 @@ export class MemStorage implements IStorage {
   private currentPs99ActionRecordingId = 1;
   private currentPs99CoordinateRecordingId = 1;
   private currentPs99ApiDataId = 1;
+  
+  // File storage
+  private files: Map<string, { content: Buffer; contentType: string; filename: string; createdAt: Date; size: number }> = new Map();
+  private currentFileId = 1;
 
   constructor() {
     // Initialize with some default settings
@@ -669,6 +685,201 @@ export class MemStorage implements IStorage {
 
   async deletePs99ApiData(id: number): Promise<boolean> {
     return this.ps99ApiData.delete(id);
+  }
+
+  // File storage operations
+  async storeFile(filename: string, content: Buffer | string, contentType = 'application/octet-stream'): Promise<{ id: string; path: string }> {
+    const id = `file_${this.currentFileId++}`;
+    const buffer = Buffer.isBuffer(content) ? content : Buffer.from(content);
+    
+    this.files.set(id, {
+      content: buffer,
+      contentType,
+      filename,
+      createdAt: new Date(),
+      size: buffer.length
+    });
+
+    return { id, path: `/api/files/${id}` };
+  }
+
+  async getFile(id: string): Promise<{ content: Buffer; contentType: string; filename: string } | undefined> {
+    const file = this.files.get(id);
+    if (!file) return undefined;
+    
+    return {
+      content: file.content,
+      contentType: file.contentType,
+      filename: file.filename
+    };
+  }
+
+  async deleteFile(id: string): Promise<boolean> {
+    return this.files.delete(id);
+  }
+
+  async listFiles(pattern?: string): Promise<Array<{ id: string; filename: string; size: number; createdAt: Date }>> {
+    const fileList = Array.from(this.files.entries()).map(([id, file]) => ({
+      id,
+      filename: file.filename,
+      size: file.size,
+      createdAt: file.createdAt
+    }));
+
+    if (pattern) {
+      const regex = new RegExp(pattern, 'i');
+      return fileList.filter(file => regex.test(file.filename));
+    }
+
+    return fileList;
+  }
+
+  // Bulk data operations
+  async storeBulkData(tableName: string, data: any[]): Promise<number> {
+    // Store bulk data based on table name
+    let count = 0;
+    
+    switch (tableName) {
+      case 'accounts':
+        for (const item of data) {
+          await this.createAccount(item);
+          count++;
+        }
+        break;
+      case 'instances':
+        for (const item of data) {
+          await this.createInstance(item);
+          count++;
+        }
+        break;
+      case 'ps99_pets':
+        for (const item of data) {
+          await this.createPs99Pet(item);
+          count++;
+        }
+        break;
+      case 'ps99_scraped_data':
+        for (const item of data) {
+          await this.createPs99ScrapedData(item);
+          count++;
+        }
+        break;
+      default:
+        throw new Error(`Unsupported table: ${tableName}`);
+    }
+    
+    return count;
+  }
+
+  async exportTableData(tableName: string): Promise<any[]> {
+    switch (tableName) {
+      case 'accounts':
+        return Array.from(this.accounts.values());
+      case 'instances':
+        return Array.from(this.instances.values());
+      case 'activity_logs':
+        return Array.from(this.activityLogs.values());
+      case 'settings':
+        return Array.from(this.settings.values());
+      case 'ps99_pets':
+        return Array.from(this.ps99Pets.values());
+      case 'ps99_scraped_data':
+        return Array.from(this.ps99ScrapedData.values());
+      case 'ps99_action_recordings':
+        return Array.from(this.ps99ActionRecordings.values());
+      case 'ps99_coordinate_recordings':
+        return Array.from(this.ps99CoordinateRecordings.values());
+      case 'ps99_api_data':
+        return Array.from(this.ps99ApiData.values());
+      default:
+        return [];
+    }
+  }
+
+  async backupDatabase(): Promise<string> {
+    const backup = {
+      timestamp: new Date().toISOString(),
+      data: {
+        accounts: Array.from(this.accounts.values()),
+        instances: Array.from(this.instances.values()),
+        activityLogs: Array.from(this.activityLogs.values()),
+        settings: Array.from(this.settings.values()),
+        ps99Pets: Array.from(this.ps99Pets.values()),
+        ps99ScrapedData: Array.from(this.ps99ScrapedData.values()),
+        ps99ActionRecordings: Array.from(this.ps99ActionRecordings.values()),
+        ps99CoordinateRecordings: Array.from(this.ps99CoordinateRecordings.values()),
+        ps99ApiData: Array.from(this.ps99ApiData.values())
+      }
+    };
+    
+    return JSON.stringify(backup, null, 2);
+  }
+
+  async restoreDatabase(backupData: string): Promise<boolean> {
+    try {
+      const backup = JSON.parse(backupData);
+      
+      // Clear existing data
+      this.accounts.clear();
+      this.instances.clear();
+      this.activityLogs.clear();
+      this.settings.clear();
+      this.ps99Pets.clear();
+      this.ps99ScrapedData.clear();
+      this.ps99ActionRecordings.clear();
+      this.ps99CoordinateRecordings.clear();
+      this.ps99ApiData.clear();
+      
+      // Restore data
+      if (backup.data.accounts) {
+        backup.data.accounts.forEach((item: any) => this.accounts.set(item.id, item));
+        this.currentAccountId = Math.max(...Array.from(this.accounts.keys()), 0) + 1;
+      }
+      
+      if (backup.data.instances) {
+        backup.data.instances.forEach((item: any) => this.instances.set(item.id, item));
+        this.currentInstanceId = Math.max(...Array.from(this.instances.keys()), 0) + 1;
+      }
+      
+      if (backup.data.activityLogs) {
+        backup.data.activityLogs.forEach((item: any) => this.activityLogs.set(item.id, item));
+        this.currentLogId = Math.max(...Array.from(this.activityLogs.keys()), 0) + 1;
+      }
+      
+      if (backup.data.settings) {
+        backup.data.settings.forEach((item: any) => this.settings.set(item.key, item));
+      }
+      
+      if (backup.data.ps99Pets) {
+        backup.data.ps99Pets.forEach((item: any) => this.ps99Pets.set(item.id, item));
+        this.currentPs99PetId = Math.max(...Array.from(this.ps99Pets.keys()), 0) + 1;
+      }
+      
+      if (backup.data.ps99ScrapedData) {
+        backup.data.ps99ScrapedData.forEach((item: any) => this.ps99ScrapedData.set(item.id, item));
+        this.currentPs99ScrapedDataId = Math.max(...Array.from(this.ps99ScrapedData.keys()), 0) + 1;
+      }
+      
+      if (backup.data.ps99ActionRecordings) {
+        backup.data.ps99ActionRecordings.forEach((item: any) => this.ps99ActionRecordings.set(item.id, item));
+        this.currentPs99ActionRecordingId = Math.max(...Array.from(this.ps99ActionRecordings.keys()), 0) + 1;
+      }
+      
+      if (backup.data.ps99CoordinateRecordings) {
+        backup.data.ps99CoordinateRecordings.forEach((item: any) => this.ps99CoordinateRecordings.set(item.id, item));
+        this.currentPs99CoordinateRecordingId = Math.max(...Array.from(this.ps99CoordinateRecordings.keys()), 0) + 1;
+      }
+      
+      if (backup.data.ps99ApiData) {
+        backup.data.ps99ApiData.forEach((item: any) => this.ps99ApiData.set(item.id, item));
+        this.currentPs99ApiDataId = Math.max(...Array.from(this.ps99ApiData.keys()), 0) + 1;
+      }
+      
+      return true;
+    } catch (error) {
+      console.error('Failed to restore database:', error);
+      return false;
+    }
   }
 }
 

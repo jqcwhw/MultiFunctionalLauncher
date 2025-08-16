@@ -77,7 +77,7 @@ export function Sidebar() {
           <span className="text-xl font-bold text-gray-900">RobloxManager</span>
         </div>
       </div>
-      
+
       <nav className="flex-1 px-4 py-4 space-y-6 overflow-y-auto">
         {navigation.map((section) => (
           <div key={section.section}>
@@ -107,7 +107,7 @@ export function Sidebar() {
           </div>
         ))}
       </nav>
-      
+
       <div className="p-4 border-t border-gray-200">
         <div className="flex items-center space-x-2 text-sm text-gray-500">
           <Activity className="h-4 w-4" />
