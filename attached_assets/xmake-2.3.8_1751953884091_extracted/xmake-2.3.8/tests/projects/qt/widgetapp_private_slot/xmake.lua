@@ -1,5 +1,0 @@
-target("test")
-    add_rules("qt.widgetapp")
-    add_files("mainwindow.h")
-    add_files("*.cpp")
-    add_frameworks("QtCore", "QtGui")

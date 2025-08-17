@@ -1,1 +1,0 @@
-export type { ClassicGroups_Events } from "./groupsQuery"
