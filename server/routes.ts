@@ -18,6 +18,9 @@ import { AccountSyncManager } from "./account-sync-manager";
 import { robloxProcessDetector } from "./roblox-process-detector";
 import { RealProcessLauncher } from "./real-process-launcher";
 import { bigGamesAPI } from "./big-games-api";
+import express from 'express';
+import { processManager } from './process-manager';
+import { ps99GameIntegration } from './ps99-game-integration';
 
 // Initialize managers
 const uwpManager = new UWPInstanceManager();
@@ -1026,6 +1029,103 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       res.status(500).json({ error: "Failed to restore database" });
     }
+  });
+
+  // Pet Simulator 99 Game Integration Routes
+  app.get('/api/ps99/active-clients', async (req, res) => {
+    try {
+      const clients = ps99GameIntegration.getActiveClients();
+      res.json(clients);
+    } catch (error) {
+      console.error('Error getting PS99 clients:', error);
+      res.status(500).json({ error: 'Failed to get active clients' });
+    }
+  });
+
+  app.post('/api/ps99/start-monitoring', async (req, res) => {
+    try {
+      await ps99GameIntegration.startGameMonitoring();
+      res.json({ success: true, message: 'Game monitoring started' });
+    } catch (error) {
+      console.error('Error starting PS99 monitoring:', error);
+      res.status(500).json({ error: 'Failed to start monitoring' });
+    }
+  });
+
+  app.post('/api/ps99/stop-monitoring', async (req, res) => {
+    try {
+      ps99GameIntegration.stopGameMonitoring();
+      res.json({ success: true, message: 'Game monitoring stopped' });
+    } catch (error) {
+      console.error('Error stopping PS99 monitoring:', error);
+      res.status(500).json({ error: 'Failed to stop monitoring' });
+    }
+  });
+
+  app.get('/api/ps99/api-data', async (req, res) => {
+    try {
+      const eggs = ps99GameIntegration.getEggsDatabase();
+      const pets = ps99GameIntegration.getPetsDatabase();
+
+      res.json({
+        eggs: eggs.size,
+        pets: pets.size,
+        status: 'connected'
+      });
+    } catch (error) {
+      console.error('Error getting PS99 API data:', error);
+      res.status(500).json({ error: 'Failed to get API data' });
+    }
+  });
+
+  // Store gameplay events in memory for this session
+  let gameplayEvents: any[] = [];
+
+  app.get('/api/ps99/gameplay-events', (req, res) => {
+    res.json(gameplayEvents);
+  });
+
+  app.get('/api/ps99/client/:pid', async (req, res) => {
+    try {
+      const pid = parseInt(req.params.pid);
+      const client = ps99GameIntegration.getClientByPid(pid);
+
+      if (!client) {
+        return res.status(404).json({ error: 'Client not found' });
+      }
+
+      res.json(client);
+    } catch (error) {
+      console.error('Error getting PS99 client:', error);
+      res.status(500).json({ error: 'Failed to get client data' });
+    }
+  });
+
+  app.post('/api/ps99/refresh-api', async (req, res) => {
+    try {
+      await ps99GameIntegration.refreshApiData();
+      res.json({ success: true, message: 'API data refreshed' });
+    } catch (error) {
+      console.error('Error refreshing PS99 API data:', error);
+      res.status(500).json({ error: 'Failed to refresh API data' });
+    }
+  });
+
+  // Listen for game events
+  ps99GameIntegration.on('hatchEvent', (event) => {
+    gameplayEvents.push(event);
+    // Keep only last 100 events
+    if (gameplayEvents.length > 100) {
+      gameplayEvents = gameplayEvents.slice(-100);
+    }
+  });
+
+  ps99GameIntegration.on('ps99ClientDetected', (client) => {
+    console.log('PS99 client detected:', client.username || client.pid);
+  });
+
+  ps99GameIntegration.on('ps99ClientDisconnected', (client) => {
+    console.log('PS99 client disconnected:', client.username || client.pid);
   });
 
   const httpServer = createServer(app);

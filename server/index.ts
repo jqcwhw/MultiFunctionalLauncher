@@ -1,92 +1,41 @@
-import express, { type Request, Response, NextFunction } from "express";
-import { registerRoutes } from "./routes";
-import { setupVite, serveStatic, log } from "./vite";
-import path from "path";
-import cors from "cors";
-import { fileURLToPath } from "url";
 
-// Fix __dirname for ES modules
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+import express from 'express';
+import cors from 'cors';
+import path from 'path';
+import routes from './routes';
+import { processManager } from './process-manager';
+import { ps99GameIntegration } from './ps99-game-integration';
 
 const app = express();
-app.use(cors()); // Added CORS middleware
+const PORT = process.env.PORT || 5000;
+
+app.use(cors());
 app.use(express.json());
-app.use(express.urlencoded({ extended: false }));
 
-// Add debugging middleware
-app.use((req, res, next) => {
-  console.log(`${new Date().toISOString()} - ${req.method} ${req.path}`);
-  next();
+// API routes
+app.use(routes);
+
+// Serve static files in production
+if (process.env.NODE_ENV === 'production') {
+  app.use(express.static(path.join(__dirname, '../dist/public')));
+  
+  app.get('*', (req, res) => {
+    res.sendFile(path.join(__dirname, '../dist/public/index.html'));
+  });
+}
+
+// Initialize PS99 game integration
+ps99GameIntegration.on('apiDataLoaded', (data) => {
+  console.log(`PS99 API loaded: ${data.eggs} eggs, ${data.pets} pets`);
 });
 
-app.use((req, res, next) => {
-  const start = Date.now();
-  const path = req.path;
-  let capturedJsonResponse: Record<string, any> | undefined = undefined;
-
-  const originalResJson = res.json;
-  res.json = function (bodyJson, ...args) {
-    capturedJsonResponse = bodyJson;
-    return originalResJson.apply(res, [bodyJson, ...args]);
-  };
-
-  res.on("finish", () => {
-    const duration = Date.now() - start;
-    if (path.startsWith("/api")) {
-      let logLine = `${req.method} ${path} ${res.statusCode} in ${duration}ms`;
-      if (capturedJsonResponse) {
-        logLine += ` :: ${JSON.stringify(capturedJsonResponse)}`;
-      }
-
-      if (logLine.length > 80) {
-        logLine = logLine.slice(0, 79) + "…";
-      }
-
-      log(logLine);
-    }
-  });
-
-  next();
+// Start the server
+app.listen(PORT, '0.0.0.0', () => {
+  console.log(`🚀 Server running on http://0.0.0.0:${PORT}`);
+  console.log('🎮 Pet Simulator 99 integration ready');
+  
+  // Auto-start process monitoring
+  processManager.startMonitoring();
 });
 
-(async () => {
-  const server = await registerRoutes(app);
-
-  app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
-    const status = err.status || err.statusCode || 500;
-    const message = err.message || "Internal Server Error";
-
-    res.status(status).json({ message });
-    throw err;
-  });
-
-  // importantly only setup vite in development and after
-  // setting up all the other routes so the catch-all route
-  // doesn't interfere with the other routes
-  if (app.get("env") === "development") {
-    await setupVite(app, server);
-  } else {
-    // Serve static files from dist/public directory
-    app.use(express.static(path.join(__dirname, '../dist/public')));
-
-    // Handle client-side routing - catch all routes that don't start with /api
-    app.get('*', (req, res) => {
-      if (!req.path.startsWith('/api')) {
-        res.sendFile(path.join(__dirname, '../dist/public/index.html'));
-      } else {
-        res.status(404).json({ error: 'API endpoint not found' });
-      }
-    });
-  }
-
-  // ALWAYS serve the app on port 5000
-  // this serves both the API and the client.
-  // It is the only port that is not firewalled.
-  const port = 5000;
-  server.listen(port, "0.0.0.0", () => {
-    log(`Server running at http://0.0.0.0:${port}`);
-    log(`API available at http://0.0.0.0:${port}/api`);
-    log(`Client served from ${app.get("env") === "development" ? "Vite dev server" : "static files"}`);
-  });
-})();
+export default app;
