@@ -225,4 +225,4 @@ The developers do not endorse or encourage any activities that violate terms of 
 
 ---
 
-**Note**: This application requires administrator privileges for UWP package management. It does not modify Roblox game files or interfere with game integrity. All instance management is done through official Windows UWP APIs.
+**Note**: This application requires administrator privileges for UWP package management. It does not modify Roblox game files or interfere with game integrity. All instance management is done through official Windows UWP APIs.# MultiFunctionalLauncher
