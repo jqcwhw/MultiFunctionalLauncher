@@ -39,7 +39,9 @@ robloxProcessDetector.startMonitoring({
   monitorResources: true
 }).catch(console.error);
 
-export async function registerRoutes(app: Express): Promise<Server> {
+export { registerRoutes };
+
+async function registerRoutes(app: Express): Promise<Server> {
   // Account management routes
   let accounts: any[] = [];
 
@@ -1131,3 +1133,5 @@ export async function registerRoutes(app: Express): Promise<Server> {
   const httpServer = createServer(app);
   return httpServer;
 }
+
+export { registerRoutes };

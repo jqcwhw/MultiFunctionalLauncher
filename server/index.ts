@@ -2,7 +2,7 @@
 import express from 'express';
 import cors from 'cors';
 import path from 'path';
-import routes from './routes';
+import { registerRoutes } from './routes';
 import { processManager } from './process-manager';
 import { ps99GameIntegration } from './ps99-game-integration';
 
@@ -12,8 +12,8 @@ const PORT = process.env.PORT || 5000;
 app.use(cors());
 app.use(express.json());
 
-// API routes
-app.use(routes);
+// Register API routes
+registerRoutes(app);
 
 // Serve static files in production
 if (process.env.NODE_ENV === 'production') {
